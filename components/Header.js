@@ -25,7 +25,6 @@ export default function Header() {
                 <ul>
                     <li><Link href="/">Inicio</Link></li>
                     <li><Link href="/categorias">Categorías</Link></li>
-                    <li><Link href="/#nosotros">Nosotros</Link></li>
                     <li>
                         <Link href="/carrito" className="cart-icon">
                             🛒

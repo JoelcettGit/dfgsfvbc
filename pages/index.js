@@ -13,6 +13,7 @@ export default function HomePage({ products }) {
     <>
       <Head>
         <title>Vida Animada</title>
+        <link rel="icon" href="/logo-vidaanimada.png"/>
       </Head>
       <Header />
       <main>

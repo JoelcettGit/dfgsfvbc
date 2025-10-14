@@ -1,6 +1,6 @@
 // pages/categorias.js
 import Head from 'next/head';
-import Image from 'next/image'; // Importa Image
+import Image from 'next/image';
 import { createClient } from '@supabase/supabase-js';
 import { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
@@ -39,12 +39,11 @@ export default function CategoriasPage({ allProducts }) {
                     <div className="product-grid">
                         {filteredProducts.map((product) => (
                             <div key={product.id} className="product-card">
-                                {/* Reemplaza <img> por <Image> */}
                                 <Image src={product.image_url} alt={product.name} width={300} height={280} style={{ objectFit: 'cover' }}/>
                                 <h4>{product.name}</h4>
                                 <p className="price">${product.price}</p>
                                 <div className="product-card-actions">
-                                    <a href={`https://wa.me/3804882298?text=Hola!%20Me%20interesa%20el%20producto:%20${product.name}`} target="_blank" rel="noopener noreferrer" className="btn-secondary">
+                                    <a href={`https://wa.me/3804882298?text=Hola!%20Me%20interesa%20el%20producto:%20${encodeURIComponent(product.name)}`} target="_blank" rel="noopener noreferrer" className="btn-secondary">
                                         ¡Lo quiero!
                                     </a>
                                     <button onClick={() => addToCart(product)} className="btn-primary">

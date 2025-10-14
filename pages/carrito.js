@@ -1,6 +1,7 @@
 // pages/carrito.js
 import Head from 'next/head';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useCart } from '../context/CartContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -33,26 +34,21 @@ export default function CartPage() {
     return (
         <>
             <Head><title>Carrito de Compras - Vida Animada</title></Head>
-
             <Header />
-            
             <main>
                 <section className="page-section">
                     <h1>Tu Carrito de Compras</h1>
-                    
                     {cartItems.length === 0 ? (
                         <div className="cart-empty">
                             <p>Tu carrito está vacío.</p>
-                            <Link href="/categorias" className="btn-primary">
-                                Ver productos
-                            </Link>
+                            <Link href="/categorias" className="btn-primary">Ver productos</Link>
                         </div>
                     ) : (
                         <div className="cart-container">
                             <div className="cart-items">
                                 {cartItems.map(item => (
                                     <div key={item.id} className="cart-item">
-                                        <img src={item.image_url} alt={item.name} />
+                                        <Image src={item.image_url} alt={item.name} width={80} height={80} style={{ objectFit: 'cover' }}/>
                                         <div className="cart-item-details">
                                             <h4>{item.name}</h4>
                                             <p className="price">${item.price}</p>
@@ -69,7 +65,6 @@ export default function CartPage() {
                                     </div>
                                 ))}
                             </div>
-
                             <aside className="cart-summary">
                                 <h2>Resumen del Pedido</h2>
                                 <div className="summary-total">
@@ -90,7 +85,6 @@ export default function CartPage() {
                     )}
                 </section>
             </main>
-
             <Footer />
         </>
     );

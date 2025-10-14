@@ -25,7 +25,7 @@ export default function CategoriasPage({ allProducts }) {
 
     return (
         <>
-            <Head><title>Productos - Vida Animada</title></Head>
+            <Head><title>Productos - Vida Animada</title> <link rel="icon" href="/logo-vidaanimada.png"/></Head>
             <Header />
             <main>
                 <section className="page-section">

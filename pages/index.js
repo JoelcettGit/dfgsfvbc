@@ -1,6 +1,7 @@
 // pages/index.js
 import Head from 'next/head';
 import Image from 'next/image';
+import Link from 'next/link'; // <-- Importa el componente Link
 import { createClient } from '@supabase/supabase-js';
 import { useCart } from '../context/CartContext';
 import Header from '../components/Header';
@@ -21,7 +22,10 @@ export default function HomePage({ products }) {
             <div className="hero-content">
                 <h1>Animamos tus días con pequeños detalles</h1>
                 <p>Descubre un mundo de color y alegría para ti y tu familia.</p>
-                <a href="/categorias" className="btn-primary">Ver Productos</a>
+                {/* --- CORRECCIÓN AQUÍ: Usamos <Link> en lugar de <a> --- */}
+                <Link href="/categorias" className="btn-primary">
+                  Ver Productos
+                </Link>
             </div>
         </section>
         <section id="productos" className="content-section-alt">

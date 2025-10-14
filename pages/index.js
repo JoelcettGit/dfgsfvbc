@@ -44,10 +44,6 @@ export default function HomePage({ products }) {
             ))}
           </div>
         </section>
-        <section id="nosotros" className="content-section">
-            <h2>Nuestra Historia</h2>
-            {/* Aquí puedes añadir el contenido de la sección "Nosotros" */}
-        </section>
       </main>
       <Footer />
     </>

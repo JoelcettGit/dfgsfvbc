@@ -15,25 +15,22 @@ export default function CartPage() {
 
     const generateWhatsAppMessage = () => {
         let message = "¡Hola Vida Animada! 👋 Me gustaría hacer el siguiente pedido:\n\n";
-        
         cartItems.forEach(item => {
             const subtotal = (item.price * item.quantity).toFixed(2);
             message += `📦 *${item.name.trim()}*\n`;
-            message += `   Cantidad: ${item.quantity}\n`;
-            message += `   Precio unitario: $${item.price}\n`;
-            message += `   Subtotal: $${subtotal}\n\n`;
+            message += `   Cantidad: ${item.quantity}\n   Precio unitario: $${item.price}\n   Subtotal: $${subtotal}\n\n`;
         });
-
-        message += `-------------------------\n`;
-        message += `*TOTAL DEL PEDIDO: $${calculateTotal()}*\n\n`;
-        message += `¡Espero su respuesta para coordinar el pago y envío! Gracias 😊`;
-
+        message += `-------------------------\n*TOTAL DEL PEDIDO: $${calculateTotal()}*\n\n¡Espero su respuesta para coordinar el pago y envío! Gracias 😊`;
         return encodeURIComponent(message);
     };
 
     return (
         <>
-            <Head><title>Carrito de Compras - Vida Animada</title> <link rel="icon" href="/logo-vidaanimada.png" data-next-head=""></Head>
+            {/* --- CORRECCIÓN AQUÍ: Cerramos la etiqueta <link /> --- */}
+            <Head>
+                <title>Carrito de Compras - Vida Animada</title>
+                <link rel="icon" href="/logo-vidaanimada.png"/>
+            </Head>
             <Header />
             <main>
                 <section className="page-section">
@@ -71,12 +68,7 @@ export default function CartPage() {
                                     <span>Total</span>
                                     <span>${calculateTotal()}</span>
                                 </div>
-                                <a 
-                                    href={`https://wa.me/3804882298?text=${generateWhatsAppMessage()}`} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
-                                    className="btn-primary whatsapp-button"
-                                >
+                                <a href={`https://wa.me/3804882298?text=${generateWhatsAppMessage()}`} target="_blank" rel="noopener noreferrer" className="btn-primary whatsapp-button">
                                     Pedir por WhatsApp
                                 </a>
                                 <button onClick={clearCart} className="btn-secondary clear-cart-button">Vaciar Carrito</button>

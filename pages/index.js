@@ -30,14 +30,11 @@ export default function HomePage({ products }) {
             {products.map((product) => (
               <Link href={`/productos/${product.id}`} key={product.id}>
                 <div className="product-card" style={{ cursor: 'pointer' }}>
-                  
                   {product.tag && <span className="product-tag">{product.tag}</span>}
-
                   <Image 
-                    src={product.product_variants[0]?.image_url || '/placeholder.png'} 
+                    src={product.product_colors[0]?.image_url || '/logo-vidaanimada.png'} 
                     alt={product.name} 
-                    width={300} 
-                    height={280} 
+                    width={300} height={280} 
                     style={{ objectFit: 'cover' }}
                   />
                   <h4>{product.name}</h4>
@@ -46,9 +43,6 @@ export default function HomePage({ products }) {
               </Link>
             ))}
           </div>
-        </section>
-        <section id="nosotros" className="content-section">
-            {/* Aquí puedes añadir el contenido de la sección "Nosotros" */}
         </section>
       </main>
       <Footer />
@@ -61,9 +55,9 @@ export async function getStaticProps() {
   
   const { data: products } = await supabase
     .from('products')
-    .select('*, product_variants (*)')
-    .eq('tag', 'Destacado') // Buscamos por la etiqueta 'Destacado'
-    .filter('product_variants', 'gt', 'stock', 0);
+    .select('*, product_colors(*, product_variants(*))') // Consulta anidada correcta
+    .eq('tag', 'Destacado')
+    .filter('product_colors.product_variants.stock', 'gt', 0);
 
   return { props: { products: products || [] }, revalidate: 10 };
 }

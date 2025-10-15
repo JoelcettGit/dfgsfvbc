@@ -44,12 +44,11 @@ export default function CategoriasPage({ allProducts }) {
                         </select>
                     </div>
                     <div className="product-grid">
-                        {/* --- CORRECCIÓN AQUÍ: Usamos 'filteredProducts' en lugar de 'products' --- */}
                         {filteredProducts.map((product) => (
                            <Link href={`/productos/${product.id}`} key={product.id}>
                              <div className="product-card" style={{cursor: 'pointer'}}>
                                {product.tag && <span className="product-tag">{product.tag}</span>}
-                               <Image src={product.product_variants[0]?.image_url || '/logo-vidaanimada.png'} alt={product.name} width={300} height={280} style={{ objectFit: 'cover' }}/>
+                               <Image src={product.product_colors[0]?.image_url || '/logo-vidaanimada.png'} alt={product.name} width={300} height={280} style={{ objectFit: 'cover' }}/>
                                <h4>{product.name}</h4>
                                <p className="price">Desde ${product.base_price}</p>
                              </div>
@@ -65,6 +64,8 @@ export default function CategoriasPage({ allProducts }) {
 
 export async function getStaticProps() {
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-    const { data: allProducts } = await supabase.from('products').select('*, product_variants(*)');
+    const { data: allProducts } = await supabase
+      .from('products')
+      .select('*, product_colors(*, product_variants(*))'); // Consulta anidada correcta
     return { props: { allProducts: allProducts || [] }, revalidate: 10 };
 }

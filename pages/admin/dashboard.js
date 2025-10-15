@@ -13,8 +13,8 @@ export default function AdminDashboard() {
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
 
-    const [view, setView] = useState('list'); // 'list' o 'form'
-    const [editingProduct, setEditingProduct] = useState(null); // Producto que se está editando
+    const [view, setView] = useState('list');
+    const [editingProduct, setEditingProduct] = useState(null);
 
     useEffect(() => {
         const checkUserAndFetchProducts = async () => {
@@ -30,12 +30,11 @@ export default function AdminDashboard() {
         checkUserAndFetchProducts();
     }, [router]);
 
-    // Nueva consulta para traer todos los datos anidados
     const fetchProducts = async () => {
         setIsLoading(true);
         const { data, error } = await supabase
             .from('products')
-            .select(`*, product_colors(*, product_variants(*))`)
+            .select(`*, product_colors(*, product_variants(*))`) // Consulta anidada correcta
             .order('id', { ascending: false });
 
         if (error) console.error("Error al cargar productos:", error.message);
@@ -49,7 +48,7 @@ export default function AdminDashboard() {
     };
 
     const handleAddNewProduct = () => {
-        setEditingProduct(null); // Aseguramos que no hay un producto en edición
+        setEditingProduct(null);
         setView('form');
     };
     
@@ -116,7 +115,6 @@ function ProductListView({ products, onAddNew, onEdit }) {
 
 // --- VISTA DE FORMULARIO PARA AGREGAR/EDITAR PRODUCTO Y VARIANTES ---
 function ProductFormView({ product, onBack, onSave }) {
-    // Estados para el producto padre
     const [name, setName] = useState(product?.name || '');
     const [description, setDescription] = useState(product?.description || '');
     const [category, setCategory] = useState(product?.category || '');
@@ -124,16 +122,13 @@ function ProductFormView({ product, onBack, onSave }) {
     const [tag, setTag] = useState(product?.tag || '');
     const [isSaving, setIsSaving] = useState(false);
 
-    // Estados para los colores y variantes
     const [colors, setColors] = useState(product?.product_colors || []);
     
-    // Estado para el formulario de NUEVO COLOR
     const [newColorName, setNewColorName] = useState('');
     const [newColorHex, setNewColorHex] = useState('#CCCCCC');
     const [displayColorPicker, setDisplayColorPicker] = useState(false);
     const [newImageFile, setNewImageFile] = useState(null);
 
-    // Estado para el MODAL de gestión de talles
     const [managingVariantsForColor, setManagingVariantsForColor] = useState(null);
 
     const handleSaveProduct = async (e) => {
@@ -145,7 +140,7 @@ function ProductFormView({ product, onBack, onSave }) {
         if (!currentProduct) {
             const { data, error } = await supabase.from('products').insert(productData).select().single();
             if (error) { alert("Error al crear producto: " + error.message); setIsSaving(false); return; }
-            currentProduct = data; // Ahora tenemos un producto con ID
+            currentProduct = data;
              alert("Producto creado. Ahora puedes agregarle colores y variantes.");
         } else {
             const { error } = await supabase.from('products').update(productData).eq('id', currentProduct.id);
@@ -154,7 +149,7 @@ function ProductFormView({ product, onBack, onSave }) {
         }
         
         setIsSaving(false);
-        onSave(); // Refresca toda la lista de productos
+        onSave();
     };
     
     const handleAddColor = async (e) => {
@@ -183,7 +178,6 @@ function ProductFormView({ product, onBack, onSave }) {
     };
 
     const handleDeleteColor = async (colorId) => {
-        // En una versión más avanzada, también deberíamos borrar las variantes asociadas y la imagen del storage
         if (!confirm("¿Seguro que quieres eliminar este color y todos sus talles asociados?")) return;
         const { error } = await supabase.from('product_colors').delete().eq('id', colorId);
         if (error) { alert("Error al eliminar color: " + error.message); }
@@ -253,12 +247,10 @@ function ProductFormView({ product, onBack, onSave }) {
     );
 }
 
-// --- NUEVO COMPONENTE: MODAL PARA GESTIONAR TALLES Y STOCK ---
+// --- MODAL PARA GESTIONAR TALLES Y STOCK ---
 function VariantsModal({ color, onClose, onSave }) {
     const [variants, setVariants] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-
-    // Estados para el formulario de NUEVO TALLE
     const [newSize, setNewSize] = useState('');
     const [newStock, setNewStock] = useState(0);
 
@@ -294,7 +286,6 @@ function VariantsModal({ color, onClose, onSave }) {
         else { setVariants(variants.filter(v => v.id !== variantId)); }
     };
     
-    // Al cerrar el modal, refrescamos la lista principal de productos
     const handleClose = () => {
         onSave();
         onClose();

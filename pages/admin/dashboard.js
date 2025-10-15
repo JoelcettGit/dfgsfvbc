@@ -131,6 +131,7 @@ export default function AdminDashboard() {
                 <header className="admin-header">
                     <h1>Dashboard</h1>
                     <p>Bienvenido, {user?.email}</p>
+                    <button onClick={() => router.push('/')} className="btn-secondary">Ver Tienda</button>
                     <button onClick={handleLogout} className="btn-secondary">Cerrar Sesión</button>
                 </header>
                 <main className="admin-main">

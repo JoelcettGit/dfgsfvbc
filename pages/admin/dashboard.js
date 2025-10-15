@@ -1,212 +1,196 @@
-// pages/admin/dashboard.js
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/router';    
 import Image from 'next/image';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
+// --- COMPONENTE PRINCIPAL DEL DASHBOARD ---
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
 
-    const [newName, setNewName] = useState('');
-    const [newPrice, setNewPrice] = useState('');
-    const [newCategory, setNewCategory] = useState('');
-    const [newStock, setNewStock] = useState('');
-    const [newIsFeatured, setNewIsFeatured] = useState(false);
-    const [newImageFile, setNewImageFile] = useState(null);
-    const [isAddingProduct, setIsAddingProduct] = useState(false);
-
-    const [editingProduct, setEditingProduct] = useState(null);
-    const [editName, setEditName] = useState('');
-    const [editPrice, setEditPrice] = useState('');
-    const [editCategory, setEditCategory] = useState('');
-    const [editImageUrl, setEditImageUrl] = useState('');
-    const [editImageFile, setEditImageFile] = useState(null);
-    const [editStock, setEditStock] = useState(0);
-    const [editIsFeatured, setEditIsFeatured] = useState(false);
-    const [isUpdatingProduct, setIsUpdatingProduct] = useState(false);
+    // Estado para gestionar la vista actual (ver lista o editar/agregar producto)
+    const [view, setView] = useState('list'); // 'list' o 'form'
+    const [editingProduct, setEditingProduct] = useState(null); // Guarda el producto que se está editando
 
     useEffect(() => {
         const checkUserAndFetchProducts = async () => {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) { router.push('/admin/login'); } 
-            else {
+            if (!session) {
+                router.push('/admin/login');
+            } else {
                 setUser(session.user);
-                const { data: fetchedProducts, error } = await supabase.from('products').select('*').order('id', { ascending: false });
-                if (error) { console.error("Error al cargar productos:", error.message); } 
-                else { setProducts(fetchedProducts || []); }
+                await fetchProducts();
                 setIsLoading(false);
             }
         };
         checkUserAndFetchProducts();
     }, [router]);
 
-    const handleNewFileChange = (e) => {
-        if (e.target.files && e.target.files.length > 0) { setNewImageFile(e.target.files[0]); }
+    // Función para obtener todos los productos con sus variantes
+    const fetchProducts = async () => {
+        const { data, error } = await supabase
+            .from('products')
+            .select(`
+                *,
+                product_variants (*)
+            `)
+            .order('id', { ascending: false });
+
+        if (error) {
+            console.error("Error al cargar productos y variantes:", error.message);
+        } else {
+            setProducts(data || []);
+        }
     };
 
-    const handleEditFileChange = (e) => {
-        if (e.target.files && e.target.files.length > 0) { setEditImageFile(e.target.files[0]); }
-    };
-
-    const handleAddProduct = async (e) => {
-        e.preventDefault();
-        if (!newImageFile) { alert("Por favor, selecciona una imagen."); return; }
-        setIsAddingProduct(true);
-        try {
-            const fileName = `${Date.now()}-${newImageFile.name.replace(/\s/g, '_')}`;
-            const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, newImageFile);
-            if (uploadError) throw uploadError;
-            const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
-            const { data, error: insertError } = await supabase.from('products').insert([{
-                name: newName, price: parseFloat(newPrice), category: newCategory.toLowerCase(),
-                image_url: publicUrl, stock: parseInt(newStock, 10), is_featured: newIsFeatured
-            }]).select();
-            if (insertError) throw insertError;
-            if (data) {
-                setProducts([data[0], ...products]);
-                setNewName(''); setNewPrice(''); setNewCategory(''); setNewStock('');
-                setNewIsFeatured(false); setNewImageFile(null);
-                document.getElementById('newImageFile').value = '';
-            }
-        } catch (error) { alert('Error: ' + error.message); } 
-        finally { setIsAddingProduct(false); }
-    };
-    
-    const handleEditClick = (product) => {
-        setEditingProduct(product);
-        setEditName(product.name); setEditPrice(product.price); setEditCategory(product.category);
-        setEditImageUrl(product.image_url); setEditImageFile(null);
-        setEditStock(product.stock); setEditIsFeatured(product.is_featured);
-    };
-
-    const handleUpdateProduct = async (e) => {
-        e.preventDefault();
-        setIsUpdatingProduct(true);
-        let finalImageUrl = editImageUrl;
-        try {
-            if (editImageFile) {
-                const fileName = `${Date.now()}-${editImageFile.name.replace(/\s/g, '_')}`;
-                const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, editImageFile);
-                if (uploadError) throw uploadError;
-                const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
-                finalImageUrl = publicUrl;
-            }
-            const { data, error: updateError } = await supabase.from('products').update({
-                name: editName, price: parseFloat(editPrice), category: editCategory.toLowerCase(),
-                image_url: finalImageUrl, stock: parseInt(editStock, 10), is_featured: editIsFeatured
-            }).eq('id', editingProduct.id).select();
-            if (updateError) throw updateError;
-            if (data) {
-                setProducts(products.map(p => (p.id === editingProduct.id ? data[0] : p)));
-                setEditingProduct(null); setEditImageFile(null);
-            }
-        } catch (error) { alert('Error al actualizar: ' + error.message); } 
-        finally { setIsUpdatingProduct(false); }
-    };
-
-    const handleDeleteProduct = async (productId, productName) => {
-        if (!confirm(`¿Seguro que quieres eliminar "${productName}"?`)) { return; }
-        try {
-            const { error } = await supabase.from('products').delete().eq('id', productId);
-            if (error) throw error;
-            setProducts(products.filter(p => p.id !== productId));
-        } catch (error) { alert('Error al eliminar: ' + error.message); }
-    };
-    
     const handleLogout = async () => {
         await supabase.auth.signOut();
         router.push('/admin/login');
     };
 
-    if (isLoading) { return <div className="loading-screen">Cargando...</div>; }
+    const handleAddNewProduct = () => {
+        setEditingProduct(null);
+        setView('form');
+    };
+    
+    const handleEditProduct = (product) => {
+        setEditingProduct(product);
+        setView('form');
+    };
+
+    if (isLoading) {
+        return <div className="loading-screen">Cargando datos del administrador...</div>;
+    }
 
     return (
-        <>
-            <div className="admin-dashboard">
-                <header className="admin-header">
-                    <h1>Dashboard</h1>
-                    <p>Bienvenido, {user?.email}</p>
-                    <button onClick={() => router.push('/')} className="btn-secondary">Ver Tienda</button>
-                    <button onClick={handleLogout} className="btn-secondary">Cerrar Sesión</button>
-                </header>
-                <main className="admin-main">
-                    <div className="admin-section">
-                        <h2>Agregar Producto</h2>
-                        <form onSubmit={handleAddProduct} className="add-product-form">
-                            <input type="text" placeholder="Nombre" value={newName} onChange={(e) => setNewName(e.target.value)} required />
-                            <input type="number" step="0.01" placeholder="Precio" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} required />
-                            <input type="text" placeholder="Categoría" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} required />
-                            <div className="file-input-container">
-                                <label htmlFor="newImageFile">Imagen del Producto</label>
-                                <input type="file" id="newImageFile" accept="image/*" onChange={handleNewFileChange} required />
-                                {newImageFile && <p className="selected-file-name">{newImageFile.name}</p>}
-                            </div>
-                            <input type="number" placeholder="Stock" value={newStock} onChange={(e) => setNewStock(e.target.value)} required />
-                            <div className="checkbox-container add-form-checkbox">
-                                <input type="checkbox" id="newIsFeatured" checked={newIsFeatured} onChange={(e) => setNewIsFeatured(e.target.checked)} />
-                                <label htmlFor="newIsFeatured">Marcar como destacado</label>
-                            </div>
-                            <button type="submit" className="btn-primary" disabled={isAddingProduct}>{isAddingProduct ? 'Agregando...' : 'Agregar Producto'}</button>
-                        </form>
-                    </div>
-                    <div className="admin-section">
-                        <h2>Listado de Productos ({products.length})</h2>
-                        <div className="table-container">
-                            <table className="products-table">
-                                <thead>
-                                    <tr>
-                                        <th>Imagen</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Destacado</th><th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {products.map(product => (
-                                        <tr key={product.id}>
-                                            <td><Image src={product.image_url} alt={product.name} className="table-product-image" width={80} height={80} /></td>
-                                            <td>{product.name}</td><td>{product.category}</td><td>${product.price}</td>
-                                            <td>{product.stock} u.</td><td>{product.is_featured ? 'Sí' : 'No'}</td>
-                                            <td>
-                                                <button onClick={() => handleEditClick(product)} className="btn-edit">Editar</button>
-                                                <button onClick={() => handleDeleteProduct(product.id, product.name)} className="btn-delete">Eliminar</button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </main>
+        <div className="admin-dashboard">
+            <header className="admin-header">
+                <h1>Dashboard de Vida Animada</h1>
+                <p>Bienvenido, {user?.email}</p>
+                <button onClick={handleLogout} className="btn-secondary">Cerrar Sesión</button>
+            </header>
+
+            <main className="admin-main">
+                {view === 'list' && (
+                    <ProductListView products={products} onAddNew={handleAddNewProduct} onEdit={handleEditProduct} />
+                )}
+                {view === 'form' && (
+                    <ProductFormView product={editingProduct} onBack={() => setView('list')} onSave={fetchProducts} />
+                )}
+            </main>
+        </div>
+    );
+}
+
+// --- VISTA DE LISTA DE PRODUCTOS ---
+function ProductListView({ products, onAddNew, onEdit }) {
+    return (
+        <div className="admin-section">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2>Listado de Productos ({products.length})</h2>
+                <button onClick={onAddNew} className="btn-primary">Agregar Nuevo Producto</button>
             </div>
-            {editingProduct && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
-                        <h2>Editando: {editingProduct.name}</h2>
-                        <form onSubmit={handleUpdateProduct}>
-                            <label>Nombre</label><input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} />
-                            <label>Precio</label><input type="number" step="0.01" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} />
-                            <label>Categoría</label><input type="text" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} />
-                            <div className="file-input-container">
-                                <label htmlFor="editImageFile">Cambiar Imagen</label>
-                                <input type="file" id="editImageFile" accept="image/*" onChange={handleEditFileChange} />
-                                {editImageFile ? (<p className="selected-file-name">{editImageFile.name}</p>) : (<p className="selected-file-name">Imagen actual: <a href={editImageUrl} target="_blank" rel="noopener noreferrer">Ver</a></p>)}
-                            </div>
-                            <label>Stock</label><input type="number" value={editStock} onChange={(e) => setEditStock(e.target.value)} />
-                            <div className="checkbox-container">
-                                <input type="checkbox" id="isFeatured" checked={editIsFeatured} onChange={(e) => setEditIsFeatured(e.target.checked)} />
-                                <label htmlFor="isFeatured">Marcar como destacado</label>
-                            </div>
-                            <div className="modal-actions">
-                                <button type="submit" className="btn-primary" disabled={isUpdatingProduct}>{isUpdatingProduct ? 'Guardando...' : 'Guardar Cambios'}</button>
-                                <button type="button" onClick={() => setEditingProduct(null)} className="btn-secondary">Cancelar</button>
-                            </div>
-                        </form>
-                    </div>
+            <div className="table-container">
+                <table className="products-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Variantes</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {products.map(product => (
+                            <tr key={product.id}>
+                                <td>{product.name}</td>
+                                <td>{product.category}</td>
+                                <td>{product.product_variants.length}</td>
+                                <td>
+                                    <button onClick={() => onEdit(product)} className="btn-edit">Editar</button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
+// --- VISTA DE FORMULARIO PARA AGREGAR/EDITAR PRODUCTOS ---
+function ProductFormView({ product, onBack, onSave }) {
+    const [name, setName] = useState(product?.name || '');
+    const [description, setDescription] = useState(product?.description || '');
+    const [category, setCategory] = useState(product?.category || '');
+    const [basePrice, setBasePrice] = useState(product?.base_price || 0);
+    const [variants, setVariants] = useState(product?.product_variants || []);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSaveProduct = async (e) => {
+        e.preventDefault();
+        setIsSaving(true);
+        
+        let productId = product?.id;
+
+        // Si es un producto nuevo, lo insertamos primero
+        if (!productId) {
+            const { data, error } = await supabase.from('products').insert({
+                name, description, category, base_price: basePrice
+            }).select().single();
+            
+            if (error) {
+                alert("Error al crear el producto: " + error.message);
+                setIsSaving(false);
+                return;
+            }
+            productId = data.id;
+        } else { // Si es un producto existente, lo actualizamos
+            const { error } = await supabase.from('products').update({
+                name, description, category, base_price: basePrice
+            }).eq('id', productId);
+
+            if (error) {
+                alert("Error al actualizar el producto: " + error.message);
+                setIsSaving(false);
+                return;
+            }
+        }
+        
+        // Aquí iría la lógica para guardar las variantes (siguiente paso)
+        alert("Producto guardado con éxito. Ahora puedes gestionar las variantes.");
+        setIsSaving(false);
+        onSave(); // Refresca la lista de productos
+        onBack(); // Vuelve a la lista
+    };
+
+    return (
+        <div className="admin-section">
+            <button onClick={onBack} className="btn-secondary" style={{ marginBottom: '1rem' }}>← Volver a la lista</button>
+            <h2>{product ? `Editando: ${product.name}` : "Agregar Nuevo Producto"}</h2>
+            
+            <form onSubmit={handleSaveProduct} className="add-product-form">
+                <h3>Datos Generales</h3>
+                <input type="text" placeholder="Nombre del Producto" value={name} onChange={e => setName(e.target.value)} required />
+                <textarea placeholder="Descripción del Producto" value={description} onChange={e => setDescription(e.target.value)} />
+                <input type="text" placeholder="Categoría" value={category} onChange={e => setCategory(e.target.value)} required />
+                <input type="number" step="0.01" placeholder="Precio Base" value={basePrice} onChange={e => setBasePrice(e.target.value)} required />
+                <button type="submit" className="btn-primary" disabled={isSaving}>
+                    {isSaving ? "Guardando..." : "Guardar Datos Generales"}
+                </button>
+            </form>
+
+            {product && (
+                <div className="variants-section">
+                    <h3>Variantes del Producto</h3>
+                    {/* Aquí irá la lista de variantes y el formulario para agregar nuevas */}
+                    <p>La gestión de variantes (colores, talles, stock e imágenes) se implementará en el siguiente paso.</p>
                 </div>
             )}
-        </>
+        </div>
     );
 }

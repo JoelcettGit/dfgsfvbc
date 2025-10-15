@@ -40,7 +40,7 @@ export default function AdminDashboard() {
             alert("Error al eliminar el producto: " + error.message);
         } else {
             alert(`Producto "${productName}" eliminado con éxito.`);
-            fetchProducts(); // Recargamos la lista de productos
+            fetchProducts();
         }
     };
 
@@ -114,58 +114,107 @@ function ProductFormView({ product, onBack, onSave }) {
     const [basePrice, setBasePrice] = useState(product?.base_price || '');
     const [tag, setTag] = useState(product?.tag || '');
     const [isSaving, setIsSaving] = useState(false);
-    const [colors, setColors] = useState(product?.product_colors || []);
     
+    const [productType, setProductType] = useState('variable');
+    const [simpleStock, setSimpleStock] = useState(0);
+    const [simpleImageFile, setSimpleImageFile] = useState(null);
+
+    const [colors, setColors] = useState(product?.product_colors || []);
     const [newColorName, setNewColorName] = useState('');
     const [newColorHex, setNewColorHex] = useState('#CCCCCC');
     const [displayColorPicker, setDisplayColorPicker] = useState(false);
     const [newImageFile, setNewImageFile] = useState(null);
-
     const [managingVariantsForColor, setManagingVariantsForColor] = useState(null);
+
+    useEffect(() => {
+        if (product && product.product_colors.length > 0) {
+            const firstColor = product.product_colors[0];
+            const hasComplexVariants = product.product_colors.length > 1 || firstColor.color_name !== 'Default' || firstColor.product_variants.some(v => v.size !== 'Único');
+            
+            if (hasComplexVariants) {
+                setProductType('variable');
+            } else {
+                setProductType('simple');
+                setSimpleStock(firstColor.product_variants[0]?.stock || 0);
+            }
+        } else if (!product) {
+            setProductType('variable'); // Por defecto para productos nuevos
+        }
+    }, [product]);
 
     const handleSaveProduct = async (e) => {
         e.preventDefault();
         setIsSaving(true);
         const productData = { name, description, category, base_price: parseFloat(basePrice), tag };
         let currentProduct = product;
-        if (!currentProduct) {
-            const { data, error } = await supabase.from('products').insert(productData).select().single();
-            if (error) { alert("Error al crear producto: " + error.message); setIsSaving(false); return; }
-            product = data; // Actualiza el producto para que tenga ID y se puedan añadir variantes
-             alert("Producto creado. Ahora puedes agregarle colores y variantes.");
-        } else {
-            const { error } = await supabase.from('products').update(productData).eq('id', currentProduct.id);
-            if (error) { alert("Error al actualizar producto: " + error.message); setIsSaving(false); return; }
-            alert("Datos generales guardados.");
+
+        try {
+            if (!currentProduct) {
+                const { data, error } = await supabase.from('products').insert(productData).select().single();
+                if (error) throw error;
+                currentProduct = data;
+                product = data; // Actualiza la prop para que la sección de variantes aparezca
+            } else {
+                const { error } = await supabase.from('products').update(productData).eq('id', currentProduct.id);
+                if (error) throw error;
+            }
+
+            if (productType === 'simple') {
+                if (!simpleImageFile && !product?.product_colors[0]?.image_url) {
+                    throw new Error("Debes seleccionar una imagen para el producto simple.");
+                }
+
+                let imageUrl = product?.product_colors[0]?.image_url;
+                if (simpleImageFile) {
+                    const fileName = `${Date.now()}-${simpleImageFile.name.replace(/\s/g, '_')}`;
+                    const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, simpleImageFile);
+                    if (uploadError) throw uploadError;
+                    const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+                    imageUrl = publicUrl;
+                }
+                
+                const { data: colorData, error: colorError } = await supabase.from('product_colors').upsert({
+                    id: product?.product_colors[0]?.id,
+                    product_id: currentProduct.id,
+                    color_name: 'Default',
+                    color_hex: '#FFFFFF',
+                    image_url: imageUrl
+                }, { onConflict: 'product_id, color_name' }).select().single();
+                if (colorError) throw colorError;
+
+                const { error: variantError } = await supabase.from('product_variants').upsert({
+                    id: product?.product_colors[0]?.product_variants[0]?.id,
+                    product_color_id: colorData.id,
+                    size: 'Único',
+                    stock: parseInt(simpleStock, 10)
+                }, { onConflict: 'product_color_id, size' });
+                if (variantError) throw variantError;
+            }
+
+            alert(product ? "Producto actualizado con éxito." : "Producto creado con éxito.");
+            onSave();
+            
+        } catch (error) {
+            alert("Error: " + error.message);
+        } finally {
+            setIsSaving(false);
         }
-        setIsSaving(false);
-        onSave();
     };
     
     const handleAddColor = async (e) => {
         e.preventDefault();
-        if (!product) {
-            alert("Primero debes guardar los datos generales del producto.");
-            return;
-        }
+        if (!product) { alert("Primero debes guardar los datos generales del producto."); return; }
         if (!newImageFile) { alert("Por favor, selecciona una imagen para el color."); return; }
-        
         const fileName = `${Date.now()}-${newImageFile.name.replace(/\s/g, '_')}`;
         const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, newImageFile);
         if (uploadError) { alert("Error al subir imagen: " + uploadError.message); return; }
-
         const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
-
         const { data, error } = await supabase.from('product_colors').insert({
-            product_id: product.id,
-            color_name: newColorName,
-            color_hex: newColorHex,
-            image_url: publicUrl,
-        }).select().single();
-
+            product_id: product.id, color_name: newColorName, color_hex: newColorHex, image_url: publicUrl
+        }).select('*, product_variants(*)').single();
         if (error) { alert("Error al agregar color: " + error.message); } 
         else {
-            setColors([...colors, { ...data, product_variants: [] }]);
+            setColors([...colors, data]);
             setNewColorName(''); setNewColorHex('#CCCCCC'); setNewImageFile(null);
             document.getElementById('colorImageFile').value = '';
         }
@@ -185,15 +234,32 @@ function ProductFormView({ product, onBack, onSave }) {
                 <h2>{product ? `Gestionando: ${product.name}` : "Agregar Nuevo Producto"}</h2>
                 <form onSubmit={handleSaveProduct} className="add-product-form">
                     <h3>Datos Generales</h3>
+                    <div className="checkbox-container add-form-checkbox">
+                        <input type="checkbox" id="hasVariants" checked={productType === 'variable'} onChange={(e) => setProductType(e.target.checked ? 'variable' : 'simple')} />
+                        <label htmlFor="hasVariants">Este producto tiene variantes (colores y/o talles)</label>
+                    </div>
                     <input type="text" placeholder="Nombre del Producto" value={name} onChange={e => setName(e.target.value)} required />
                     <textarea placeholder="Descripción" value={description} onChange={e => setDescription(e.target.value)} rows="3" />
                     <input type="text" placeholder="Categoría" value={category} onChange={e => setCategory(e.target.value)} required />
                     <input type="number" step="0.01" placeholder="Precio Base" value={basePrice} onChange={e => setBasePrice(e.target.value)} required />
                     <input type="text" placeholder="Etiqueta (ej: Destacado, Oferta)" value={tag} onChange={e => setTag(e.target.value)} />
+                    
+                    {productType === 'simple' && (
+                        <>
+                            <input type="number" placeholder="Stock" value={simpleStock} onChange={e => setSimpleStock(e.target.value)} required />
+                            <div className="file-input-container">
+                                <label htmlFor="simpleImageFile">Imagen del Producto</label>
+                                <input type="file" id="simpleImageFile" accept="image/*" onChange={(e) => setSimpleImageFile(e.target.files[0])} />
+                                {simpleImageFile && <p className="selected-file-name">{simpleImageFile.name}</p>}
+                                {!simpleImageFile && product?.product_colors[0]?.image_url && <p className="selected-file-name">Imagen actual: <a href={product.product_colors[0].image_url} target="_blank" rel="noopener noreferrer">Ver</a></p>}
+                            </div>
+                        </>
+                    )}
+
                     <button type="submit" className="btn-primary" disabled={isSaving}>{isSaving ? "Guardando..." : "Guardar Datos Generales"}</button>
                 </form>
 
-                {product && (
+                {product && productType === 'variable' && (
                     <div className="variants-section">
                         <h3>Colores y Galería</h3>
                         <div className="table-container">
@@ -228,6 +294,7 @@ function ProductFormView({ product, onBack, onSave }) {
                     </div>
                 )}
             </div>
+            
             {managingVariantsForColor && (
                 <VariantsModal color={managingVariantsForColor} onClose={() => setManagingVariantsForColor(null)} onSave={onSave} />
             )}

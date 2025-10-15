@@ -32,7 +32,6 @@ export default function AdminDashboard() {
         setIsLoading(false);
     };
 
-    // NUEVA FUNCIÓN PARA ELIMINAR EL PRODUCTO PADRE
     const handleDeleteProduct = async (productId, productName) => {
         if (!confirm(`¿Estás seguro de que quieres eliminar "${productName}" y todas sus variantes? Esta acción es permanente.`)) return;
         
@@ -41,7 +40,7 @@ export default function AdminDashboard() {
             alert("Error al eliminar el producto: " + error.message);
         } else {
             alert(`Producto "${productName}" eliminado con éxito.`);
-            fetchProducts(); // Recargamos la lista de productos
+            fetchProducts();
         }
     };
 
@@ -112,7 +111,7 @@ function ProductFormView({ product, onBack, onSave }) {
     const [name, setName] = useState(product?.name || '');
     const [description, setDescription] = useState(product?.description || '');
     const [category, setCategory] = useState(product?.category || '');
-    const [basePrice, setBasePrice] = useState(product?.base_price || ''); // Estado para el precio
+    const [basePrice, setBasePrice] = useState(product?.base_price || '');
     const [tag, setTag] = useState(product?.tag || '');
     const [isSaving, setIsSaving] = useState(false);
     const [colors, setColors] = useState(product?.product_colors || []);
@@ -186,7 +185,7 @@ function ProductFormView({ product, onBack, onSave }) {
                     <textarea placeholder="Descripción" value={description} onChange={e => setDescription(e.target.value)} rows="3" />
                     <input type="text" placeholder="Categoría" value={category} onChange={e => setCategory(e.target.value)} required />
                     
-                    {/* --- CORRECCIÓN: CAMPO DE PRECIO REINSERTADO --- */}
+                    {/* --- CORRECCIÓN DEFINITIVA: CAMPO DE PRECIO REINSERTADO --- */}
                     <input type="number" step="0.01" placeholder="Precio Base" value={basePrice} onChange={e => setBasePrice(e.target.value)} required />
 
                     <input type="text" placeholder="Etiqueta (ej: Destacado, Oferta)" value={tag} onChange={e => setTag(e.target.value)} />

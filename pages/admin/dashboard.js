@@ -26,14 +26,23 @@ export default function AdminDashboard() {
 
     const fetchProducts = async () => {
         setIsLoading(true);
-        const { data, error } = await supabase
-            .from('products')
-            .select(`*, product_colors(*, product_variants(*))`)
-            .order('id', { ascending: false });
-
+        const { data, error } = await supabase.from('products').select(`*, product_colors(*, product_variants(*))`).order('id', { ascending: false });
         if (error) console.error("Error al cargar productos:", error.message);
         else setProducts(data || []);
         setIsLoading(false);
+    };
+
+    // NUEVA FUNCIÓN PARA ELIMINAR EL PRODUCTO PADRE
+    const handleDeleteProduct = async (productId, productName) => {
+        if (!confirm(`¿Estás seguro de que quieres eliminar "${productName}" y todas sus variantes? Esta acción es permanente.`)) return;
+        
+        const { error } = await supabase.from('products').delete().eq('id', productId);
+        if (error) {
+            alert("Error al eliminar el producto: " + error.message);
+        } else {
+            alert(`Producto "${productName}" eliminado con éxito.`);
+            fetchProducts(); // Recargamos la lista de productos
+        }
     };
 
     const handleLogout = async () => {
@@ -41,19 +50,10 @@ export default function AdminDashboard() {
         router.push('/admin/login');
     };
 
-    const handleAddNewProduct = () => {
-        setEditingProduct(null);
-        setView('form');
-    };
-    
-    const handleEditProduct = (product) => {
-        setEditingProduct(product);
-        setView('form');
-    };
+    const handleAddNewProduct = () => { setEditingProduct(null); setView('form'); };
+    const handleEditProduct = (product) => { setEditingProduct(product); setView('form'); };
 
-    if (isLoading) {
-        return <div className="loading-screen">Cargando datos del administrador...</div>;
-    }
+    if (isLoading) { return <div className="loading-screen">Cargando...</div>; }
 
     return (
         <div className="admin-dashboard">
@@ -65,10 +65,9 @@ export default function AdminDashboard() {
                     <button onClick={handleLogout} className="btn-secondary">Cerrar Sesión</button>
                 </div>
             </header>
-
             <main className="admin-main">
                 {view === 'list' && (
-                    <ProductListView products={products} onAddNew={handleAddNewProduct} onEdit={handleEditProduct} />
+                    <ProductListView products={products} onAddNew={handleAddNewProduct} onEdit={handleEditProduct} onDelete={handleDeleteProduct} />
                 )}
                 {view === 'form' && (
                     <ProductFormView product={editingProduct} onBack={() => setView('list')} onSave={fetchProducts} />
@@ -79,7 +78,7 @@ export default function AdminDashboard() {
 }
 
 // --- VISTA DE LISTA ---
-function ProductListView({ products, onAddNew, onEdit }) {
+function ProductListView({ products, onAddNew, onEdit, onDelete }) {
     return (
         <div className="admin-section">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -88,16 +87,17 @@ function ProductListView({ products, onAddNew, onEdit }) {
             </div>
             <div className="table-container">
                 <table className="products-table">
-                    <thead>
-                        <tr><th>Nombre</th><th>Categoría</th><th>Colores</th><th>Acciones</th></tr>
-                    </thead>
+                    <thead><tr><th>Nombre</th><th>Categoría</th><th>Colores</th><th>Acciones</th></tr></thead>
                     <tbody>
                         {products.map(p => (
                             <tr key={p.id}>
                                 <td>{p.name}</td>
                                 <td>{p.category}</td>
                                 <td>{p.product_colors.length}</td>
-                                <td><button onClick={() => onEdit(p)} className="btn-edit">Gestionar</button></td>
+                                <td className="variant-actions">
+                                    <button onClick={() => onEdit(p)} className="btn-edit">Gestionar</button>
+                                    <button onClick={() => onDelete(p.id, p.name)} className="btn-delete">Eliminar</button>
+                                </td>
                             </tr>
                         ))}
                     </tbody>
@@ -112,7 +112,7 @@ function ProductFormView({ product, onBack, onSave }) {
     const [name, setName] = useState(product?.name || '');
     const [description, setDescription] = useState(product?.description || '');
     const [category, setCategory] = useState(product?.category || '');
-    const [basePrice, setBasePrice] = useState(product?.base_price || 0); // Estado para el precio
+    const [basePrice, setBasePrice] = useState(product?.base_price || ''); // Estado para el precio
     const [tag, setTag] = useState(product?.tag || '');
     const [isSaving, setIsSaving] = useState(false);
     const [colors, setColors] = useState(product?.product_colors || []);
@@ -127,9 +127,8 @@ function ProductFormView({ product, onBack, onSave }) {
     const handleSaveProduct = async (e) => {
         e.preventDefault();
         setIsSaving(true);
-        const productData = { name, description, category, base_price: basePrice, tag }; // Se incluye base_price
+        const productData = { name, description, category, base_price: parseFloat(basePrice), tag };
         let currentProduct = product;
-
         if (!currentProduct) {
             const { data, error } = await supabase.from('products').insert(productData).select().single();
             if (error) { alert("Error al crear producto: " + error.message); setIsSaving(false); return; }
@@ -140,7 +139,6 @@ function ProductFormView({ product, onBack, onSave }) {
             if (error) { alert("Error al actualizar producto: " + error.message); setIsSaving(false); return; }
             alert("Datos generales guardados.");
         }
-        
         setIsSaving(false);
         onSave();
     };
@@ -182,14 +180,13 @@ function ProductFormView({ product, onBack, onSave }) {
             <div className="admin-section">
                 <button onClick={onBack} className="btn-secondary" style={{ marginBottom: '1rem' }}>← Volver a la lista</button>
                 <h2>{product ? `Gestionando: ${product.name}` : "Agregar Nuevo Producto"}</h2>
-                
                 <form onSubmit={handleSaveProduct} className="add-product-form">
                     <h3>Datos Generales</h3>
                     <input type="text" placeholder="Nombre del Producto" value={name} onChange={e => setName(e.target.value)} required />
                     <textarea placeholder="Descripción" value={description} onChange={e => setDescription(e.target.value)} rows="3" />
                     <input type="text" placeholder="Categoría" value={category} onChange={e => setCategory(e.target.value)} required />
                     
-                    {/* --- CAMPO DE PRECIO REINSERTADO AQUÍ --- */}
+                    {/* --- CORRECCIÓN: CAMPO DE PRECIO REINSERTADO --- */}
                     <input type="number" step="0.01" placeholder="Precio Base" value={basePrice} onChange={e => setBasePrice(e.target.value)} required />
 
                     <input type="text" placeholder="Etiqueta (ej: Destacado, Oferta)" value={tag} onChange={e => setTag(e.target.value)} />
@@ -231,13 +228,8 @@ function ProductFormView({ product, onBack, onSave }) {
                     </div>
                 )}
             </div>
-            
             {managingVariantsForColor && (
-                <VariantsModal 
-                    color={managingVariantsForColor} 
-                    onClose={() => setManagingVariantsForColor(null)} 
-                    onSave={onSave}
-                />
+                <VariantsModal color={managingVariantsForColor} onClose={() => setManagingVariantsForColor(null)} onSave={onSave} />
             )}
         </>
     );

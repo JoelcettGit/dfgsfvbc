@@ -6,6 +6,7 @@ import { SketchPicker } from 'react-color';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
+
 // --- COMPONENTE PRINCIPAL DEL DASHBOARD ---
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
@@ -52,7 +53,7 @@ export default function AdminDashboard() {
         setEditingProduct(null);
         setView('form');
     };
-    
+
     const handleEditProduct = (product) => {
         setEditingProduct(product);
         setView('form');
@@ -112,13 +113,13 @@ function ProductListView({ products, onAddNew, onEdit }) {
     );
 }
 
-// --- VISTA DE FORMULARIO PARA AGREGAR/EDITAR PRODUCTOS ---
+// --- VISTA DE FORMULARIO (ACTUALIZADA CON EDICIÓN DE VARIANTES) ---
 function ProductFormView({ product, onBack, onSave }) {
     const [name, setName] = useState(product?.name || '');
     const [description, setDescription] = useState(product?.description || '');
     const [category, setCategory] = useState(product?.category || '');
     const [basePrice, setBasePrice] = useState(product?.base_price || 0);
-    const [tag, setTag] = useState(product?.tag || ''); // Estado para la etiqueta
+    const [tag, setTag] = useState(product?.tag || '');
     const [variants, setVariants] = useState(product?.product_variants || []);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -129,6 +130,14 @@ function ProductFormView({ product, onBack, onSave }) {
     const [newVariantSize, setNewVariantSize] = useState('');
     const [newVariantStock, setNewVariantStock] = useState(0);
     const [newVariantImageFile, setNewVariantImageFile] = useState(null);
+
+    // --- NUEVO: Estados para el MODAL DE EDICIÓN DE VARIANTE ---
+    const [editingVariant, setEditingVariant] = useState(null); // Guarda la variante que se está editando
+    const [editVariantColorName, setEditVariantColorName] = useState('');
+    const [editVariantColorHex, setEditVariantColorHex] = useState('');
+    const [editVariantSize, setEditVariantSize] = useState('');
+    const [editVariantStock, setEditVariantStock] = useState(0);
+    const [displayEditColorPicker, setDisplayEditColorPicker] = useState(false);
 
     const handleSaveProduct = async (e) => {
         e.preventDefault();
@@ -144,7 +153,7 @@ function ProductFormView({ product, onBack, onSave }) {
             const { error } = await supabase.from('products').update(productData).eq('id', currentProductId);
             if (error) { alert("Error al actualizar el producto: " + error.message); setIsSaving(false); return; }
         }
-        
+
         alert("Datos generales guardados.");
         setIsSaving(false);
         onSave();
@@ -153,7 +162,7 @@ function ProductFormView({ product, onBack, onSave }) {
     const handleAddVariant = async (e) => {
         e.preventDefault();
         if (!newVariantImageFile) { alert("Por favor, selecciona una imagen para la variante."); return; }
-        
+
         const fileName = `${Date.now()}-${newVariantImageFile.name.replace(/\s/g, '_')}`;
         const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, newVariantImageFile);
         if (uploadError) { alert("Error al subir la imagen: " + uploadError.message); return; }
@@ -177,11 +186,41 @@ function ProductFormView({ product, onBack, onSave }) {
             document.getElementById('variantImageFile').value = '';
         }
     };
+    // --- NUEVO: Abre el modal para editar una variante ---
+    const handleEditVariantClick = (variant) => {
+        setEditingVariant(variant);
+        setEditVariantColorName(variant.color_name || '');
+        setEditVariantColorHex(variant.color_hex || '#CCCCCC');
+        setEditVariantSize(variant.size || '');
+        setEditVariantStock(variant.stock || 0);
+    };
 
+    // --- NUEVO: Guarda los cambios de la variante editada ---
+    const handleUpdateVariant = async (e) => {
+        e.preventDefault();
+        const { data, error } = await supabase
+            .from('product_variants')
+            .update({
+                color_name: editVariantColorName,
+                color_hex: editVariantColorHex,
+                size: editVariantSize,
+                stock: editVariantStock
+            })
+            .eq('id', editingVariant.id)
+            .select()
+            .single();
+
+        if (error) {
+            alert("Error al actualizar la variante: " + error.message);
+        } else {
+            setVariants(variants.map(v => v.id === editingVariant.id ? data : v));
+            setEditingVariant(null); // Cierra el modal
+        }
+    };
     const handleDeleteVariant = async (variantId) => {
         if (!confirm("¿Estás seguro de que quieres eliminar esta variante?")) return;
         const { error } = await supabase.from('product_variants').delete().eq('id', variantId);
-        if (error) { alert("Error al eliminar la variante: " + error.message); } 
+        if (error) { alert("Error al eliminar la variante: " + error.message); }
         else { setVariants(variants.filter(v => v.id !== variantId)); }
     };
 
@@ -189,7 +228,7 @@ function ProductFormView({ product, onBack, onSave }) {
         <div className="admin-section">
             <button onClick={onBack} className="btn-secondary" style={{ marginBottom: '1rem' }}>← Volver a la lista</button>
             <h2>{product ? `Gestionando: ${product.name}` : "Agregar Nuevo Producto"}</h2>
-            
+
             <form onSubmit={handleSaveProduct} className="add-product-form">
                 <h3>Datos Generales</h3>
                 <input type="text" placeholder="Nombre del Producto" value={name} onChange={e => setName(e.target.value)} required />
@@ -210,10 +249,18 @@ function ProductFormView({ product, onBack, onSave }) {
                                 {variants.map(v => (
                                     <tr key={v.id}>
                                         <td><Image src={v.image_url} alt={`${v.color_name} ${v.size}`} width={50} height={50} className="table-product-image" /></td>
-                                        <td>{v.color_name || '-'}</td>
+                                        <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ width: '20px', height: '20px', backgroundColor: v.color_hex, borderRadius: '50%', border: '1px solid #eee' }}></span>
+                                                {v.color_name || '-'}
+                                            </div>
+                                        </td>
                                         <td>{v.size || '-'}</td>
                                         <td>{v.stock} u.</td>
-                                        <td><button onClick={() => handleDeleteVariant(v.id)} className="btn-delete">Eliminar</button></td>
+                                        <td className="variant-actions">
+                                            <button onClick={() => handleEditVariantClick(v)} className="btn-edit">Editar</button>
+                                            <button onClick={() => handleDeleteVariant(v.id)} className="btn-delete">Eliminar</button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -235,10 +282,45 @@ function ProductFormView({ product, onBack, onSave }) {
                             ) : null}
                         </div>
                         <input type="text" placeholder="Talle (ej: S, M, Único)" value={newVariantSize} onChange={e => setNewVariantSize(e.target.value)} />
-                        <input type="number" placeholder="Stock" value={newVariantStock} onChange={e => setNewVariantStock(e.target.value)} required/>
+                        <input type="number" placeholder="Stock" value={newVariantStock} onChange={e => setNewVariantStock(e.target.value)} required />
                         <input type="file" id="variantImageFile" onChange={e => setNewVariantImageFile(e.target.files[0])} required />
                         <button type="submit" className="btn-primary">Añadir Variante</button>
                     </form>
+                </div>
+            )}
+            {editingVariant && (
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <h2>Editando Variante</h2>
+                        <form onSubmit={handleUpdateVariant}>
+                            <label>Nombre del Color</label>
+                            <input type="text" value={editVariantColorName} onChange={e => setEditVariantColorName(e.target.value)} />
+
+                            <div className="color-picker-wrapper">
+                                <label>Elegir Color Hex</label>
+                                <div className="color-swatch" onClick={() => setDisplayEditColorPicker(!displayEditColorPicker)}>
+                                    <div className="color-preview" style={{ background: editVariantColorHex }} />
+                                </div>
+                                {displayEditColorPicker ? (
+                                    <div className="color-popover">
+                                        <div className="color-cover" onClick={() => setDisplayEditColorPicker(false)} />
+                                        <SketchPicker color={editVariantColorHex} onChange={(color) => setEditVariantColorHex(color.hex)} />
+                                    </div>
+                                ) : null}
+                            </div>
+
+                            <label>Talle</label>
+                            <input type="text" value={editVariantSize} onChange={e => setEditVariantSize(e.target.value)} />
+
+                            <label>Stock</label>
+                            <input type="number" value={editVariantStock} onChange={e => setEditVariantStock(e.target.value)} />
+
+                            <div className="modal-actions">
+                                <button type="submit" className="btn-primary">Guardar Cambios</button>
+                                <button type="button" onClick={() => setEditingVariant(null)} className="btn-secondary">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
         </div>

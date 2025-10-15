@@ -12,18 +12,15 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.
 export default function ProductPage({ product }) {
     const { addToCart } = useCart();
     
-    // Estados para las selecciones del usuario
     const [selectedColor, setSelectedColor] = useState(null);
     const [selectedSize, setSelectedSize] = useState(null);
     const [currentVariant, setCurrentVariant] = useState(null);
 
-    // Derivamos listas únicas de colores y talles disponibles
     const availableColors = [...new Set(product.product_variants.map(v => v.color_name).filter(Boolean))];
     const availableSizes = selectedColor 
         ? [...new Set(product.product_variants.filter(v => v.color_name === selectedColor).map(v => v.size).filter(Boolean))]
         : [...new Set(product.product_variants.map(v => v.size).filter(Boolean))];
 
-    // Efecto para setear la selección inicial cuando la página carga
     useEffect(() => {
         if (availableColors.length > 0) setSelectedColor(availableColors[0]);
         else setSelectedColor(null);
@@ -34,27 +31,22 @@ export default function ProductPage({ product }) {
         
         if (initialSizes.length > 0) setSelectedSize(initialSizes[0]);
         else setSelectedSize(null);
-    }, [product]);
+    // --- CORRECCIÓN AQUÍ: Se añaden las dependencias que faltaban ---
+    }, [product, availableColors]); 
 
-    // Efecto para encontrar la variante actual basada en la selección del usuario
     useEffect(() => {
         const variant = product.product_variants.find(v => 
-            (v.color_name === selectedColor) && 
-            (v.size === selectedSize)
+            (!v.color_name || v.color_name === selectedColor) && 
+            (!v.size || v.size === selectedSize)
         );
-        setCurrentVariant(variant || product.product_variants[0]); // Si no encuentra, muestra la primera
+        setCurrentVariant(variant || product.product_variants[0]);
     }, [selectedColor, selectedSize, product.product_variants]);
 
     const handleAddToCart = () => {
         if (currentVariant && currentVariant.stock > 0) {
-            // Pasamos un objeto combinado con la info del producto y la variante
             addToCart({
-                id: currentVariant.id, // ID de la variante, es la clave
-                name: product.name,
-                price: product.base_price,
-                image_url: currentVariant.image_url,
-                color_name: currentVariant.color_name,
-                size: currentVariant.size
+                id: currentVariant.id, name: product.name, price: product.base_price,
+                image_url: currentVariant.image_url, color_name: currentVariant.color_name, size: currentVariant.size
             });
             alert(`${product.name} (${currentVariant.color_name || ''} ${currentVariant.size || ''}) fue agregado al carrito!`);
         } else {
@@ -99,7 +91,6 @@ export default function ProductPage({ product }) {
                                     </div>
                                 </div>
                             )}
-
                             {availableSizes.length > 0 && (
                                 <div className="variant-selector">
                                     <label>Talle:</label>
@@ -115,11 +106,9 @@ export default function ProductPage({ product }) {
                                     </div>
                                 </div>
                             )}
-                            
                             <div className="stock-info">
                                 {currentVariant?.stock > 0 ? `${currentVariant.stock} unidades disponibles` : 'Sin stock'}
                             </div>
-
                             <button onClick={handleAddToCart} className="btn-primary add-to-cart-btn" disabled={!currentVariant || currentVariant.stock === 0}>
                                 Agregar al Carrito
                             </button>
@@ -139,10 +128,6 @@ export async function getStaticPaths() {
 }
 
 export async function getStaticProps({ params }) {
-    const { data: product } = await supabase
-        .from('products')
-        .select('*, product_variants (*)')
-        .eq('id', params.id)
-        .single();
+    const { data: product } = await supabase.from('products').select('*, product_variants (*)').eq('id', params.id).single();
     return { props: { product }, revalidate: 10 };
 }

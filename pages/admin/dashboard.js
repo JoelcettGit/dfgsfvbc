@@ -6,26 +6,20 @@ import { SketchPicker } from 'react-color';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-// --- COMPONENTE PRINCIPAL DEL DASHBOARD ---
+// --- COMPONENTE PRINCIPAL ---
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
-
     const [view, setView] = useState('list');
     const [editingProduct, setEditingProduct] = useState(null);
 
     useEffect(() => {
         const checkUserAndFetchProducts = async () => {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                router.push('/admin/login');
-            } else {
-                setUser(session.user);
-                await fetchProducts();
-                setIsLoading(false);
-            }
+            if (!session) { router.push('/admin/login'); }
+            else { setUser(session.user); await fetchProducts(); setIsLoading(false); }
         };
         checkUserAndFetchProducts();
     }, [router]);
@@ -34,7 +28,7 @@ export default function AdminDashboard() {
         setIsLoading(true);
         const { data, error } = await supabase
             .from('products')
-            .select(`*, product_colors(*, product_variants(*))`) // Consulta anidada correcta
+            .select(`*, product_colors(*, product_variants(*))`)
             .order('id', { ascending: false });
 
         if (error) console.error("Error al cargar productos:", error.message);
@@ -84,7 +78,7 @@ export default function AdminDashboard() {
     );
 }
 
-// --- VISTA DE LISTA DE PRODUCTOS ---
+// --- VISTA DE LISTA ---
 function ProductListView({ products, onAddNew, onEdit }) {
     return (
         <div className="admin-section">
@@ -113,15 +107,14 @@ function ProductListView({ products, onAddNew, onEdit }) {
     );
 }
 
-// --- VISTA DE FORMULARIO PARA AGREGAR/EDITAR PRODUCTO Y VARIANTES ---
+// --- VISTA DE FORMULARIO ---
 function ProductFormView({ product, onBack, onSave }) {
     const [name, setName] = useState(product?.name || '');
     const [description, setDescription] = useState(product?.description || '');
     const [category, setCategory] = useState(product?.category || '');
-    const [basePrice, setBasePrice] = useState(product?.base_price || 0);
+    const [basePrice, setBasePrice] = useState(product?.base_price || 0); // Estado para el precio
     const [tag, setTag] = useState(product?.tag || '');
     const [isSaving, setIsSaving] = useState(false);
-
     const [colors, setColors] = useState(product?.product_colors || []);
     
     const [newColorName, setNewColorName] = useState('');
@@ -134,7 +127,7 @@ function ProductFormView({ product, onBack, onSave }) {
     const handleSaveProduct = async (e) => {
         e.preventDefault();
         setIsSaving(true);
-        const productData = { name, description, category, base_price: basePrice, tag };
+        const productData = { name, description, category, base_price: basePrice, tag }; // Se incluye base_price
         let currentProduct = product;
 
         if (!currentProduct) {
@@ -195,7 +188,10 @@ function ProductFormView({ product, onBack, onSave }) {
                     <input type="text" placeholder="Nombre del Producto" value={name} onChange={e => setName(e.target.value)} required />
                     <textarea placeholder="Descripción" value={description} onChange={e => setDescription(e.target.value)} rows="3" />
                     <input type="text" placeholder="Categoría" value={category} onChange={e => setCategory(e.target.value)} required />
+                    
+                    {/* --- CAMPO DE PRECIO REINSERTADO AQUÍ --- */}
                     <input type="number" step="0.01" placeholder="Precio Base" value={basePrice} onChange={e => setBasePrice(e.target.value)} required />
+
                     <input type="text" placeholder="Etiqueta (ej: Destacado, Oferta)" value={tag} onChange={e => setTag(e.target.value)} />
                     <button type="submit" className="btn-primary" disabled={isSaving}>{isSaving ? "Guardando..." : "Guardar Datos Generales"}</button>
                 </form>
@@ -247,7 +243,7 @@ function ProductFormView({ product, onBack, onSave }) {
     );
 }
 
-// --- MODAL PARA GESTIONAR TALLES Y STOCK ---
+// --- MODAL PARA GESTIONAR TALLES ---
 function VariantsModal({ color, onClose, onSave }) {
     const [variants, setVariants] = useState([]);
     const [isLoading, setIsLoading] = useState(true);

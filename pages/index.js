@@ -3,37 +3,41 @@ import Head from 'next/head';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
-import { useCart } from '../context/CartContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
 export default function HomePage({ products }) {
-  const { addToCart } = useCart();
-
   return (
     <>
       <Head>
         <title>Vida Animada</title>
-        <link rel="icon" href="/logo-vidaanimada.png" />
+        <link rel="icon" href="/logo-vidaanimada.png"/>
       </Head>
       <Header />
       <main>
-        <section id="inicio" className="hero-section">{/* ... */}</section>
+        <section id="inicio" className="hero-section">
+            <div className="hero-content">
+                <h1>Animamos tus días con pequeños detalles</h1>
+                <p>Descubre un mundo de color y alegría para ti y tu familia.</p>
+                <Link href="/categorias" className="btn-primary">
+                  Ver Productos
+                </Link>
+            </div>
+        </section>
         <section id="productos" className="content-section-alt">
           <h2>Productos Destacados</h2>
           <div className="product-grid">
             {products.map((product) => (
               <Link href={`/productos/${product.id}`} key={product.id}>
                 <div className="product-card" style={{ cursor: 'pointer' }}>
-
-                  {/* --- LA LÍNEA VA AQUÍ, DENTRO DE LA TARJETA --- */}
+                  
                   {product.tag && <span className="product-tag">{product.tag}</span>}
 
-                  <Image
-                    src={product.product_variants[0]?.image_url || '/placeholder.png'}
-                    alt={product.name}
-                    width={300}
-                    height={280}
+                  <Image 
+                    src={product.product_variants[0]?.image_url || '/placeholder.png'} 
+                    alt={product.name} 
+                    width={300} 
+                    height={280} 
                     style={{ objectFit: 'cover' }}
                   />
                   <h4>{product.name}</h4>
@@ -43,6 +47,9 @@ export default function HomePage({ products }) {
             ))}
           </div>
         </section>
+        <section id="nosotros" className="content-section">
+            {/* Aquí puedes añadir el contenido de la sección "Nosotros" */}
+        </section>
       </main>
       <Footer />
     </>
@@ -50,13 +57,13 @@ export default function HomePage({ products }) {
 }
 
 export async function getStaticProps() {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-  // Traemos los productos destacados CON sus variantes
+  const supabase = createClient( process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY );
+  
   const { data: products } = await supabase
     .from('products')
     .select('*, product_variants (*)')
-    .eq('is_featured', true)
-    .filter('product_variants', 'gt', 'stock', 0); // Opcional: solo muestra si alguna variante tiene stock
+    .eq('tag', 'Destacado') // Buscamos por la etiqueta 'Destacado'
+    .filter('product_variants', 'gt', 'stock', 0);
 
   return { props: { products: products || [] }, revalidate: 10 };
 }

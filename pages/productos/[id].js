@@ -23,30 +23,40 @@ export default function ProductPage({ product }) {
         ? [...new Set(product.product_variants.filter(v => v.color_name === selectedColor).map(v => v.size).filter(Boolean))]
         : [...new Set(product.product_variants.map(v => v.size).filter(Boolean))];
 
-    // Efecto para setear la selección inicial
+    // Efecto para setear la selección inicial cuando la página carga
     useEffect(() => {
         if (availableColors.length > 0) setSelectedColor(availableColors[0]);
-        if (availableSizes.length > 0) setSelectedSize(availableSizes[0]);
+        else setSelectedColor(null);
+
+        const initialSizes = availableColors.length > 0
+            ? [...new Set(product.product_variants.filter(v => v.color_name === availableColors[0]).map(v => v.size).filter(Boolean))]
+            : [...new Set(product.product_variants.map(v => v.size).filter(Boolean))];
+        
+        if (initialSizes.length > 0) setSelectedSize(initialSizes[0]);
+        else setSelectedSize(null);
     }, [product]);
 
-    // Efecto para encontrar la variante actual basada en la selección
+    // Efecto para encontrar la variante actual basada en la selección del usuario
     useEffect(() => {
         const variant = product.product_variants.find(v => 
-            (!v.color_name || v.color_name === selectedColor) && 
-            (!v.size || v.size === selectedSize)
+            (v.color_name === selectedColor) && 
+            (v.size === selectedSize)
         );
-        setCurrentVariant(variant);
+        setCurrentVariant(variant || product.product_variants[0]); // Si no encuentra, muestra la primera
     }, [selectedColor, selectedSize, product.product_variants]);
 
     const handleAddToCart = () => {
         if (currentVariant && currentVariant.stock > 0) {
-            // Pasamos la info del producto padre y la variante específica al carrito
+            // Pasamos un objeto combinado con la info del producto y la variante
             addToCart({
-                ...product, // name, base_price, etc.
-                ...currentVariant, // id de la variante, color, talle, imagen
-                id: currentVariant.id // Sobrescribimos el id para que sea el de la variante
+                id: currentVariant.id, // ID de la variante, es la clave
+                name: product.name,
+                price: product.base_price,
+                image_url: currentVariant.image_url,
+                color_name: currentVariant.color_name,
+                size: currentVariant.size
             });
-            alert(`${product.name} (${selectedColor}, ${selectedSize}) fue agregado al carrito!`);
+            alert(`${product.name} (${currentVariant.color_name || ''} ${currentVariant.size || ''}) fue agregado al carrito!`);
         } else {
             alert("Este producto no está disponible en la selección actual.");
         }
@@ -63,10 +73,9 @@ export default function ProductPage({ product }) {
                     <div className="product-detail-layout">
                         <div className="product-image-section">
                             <Image 
-                                src={currentVariant?.image_url || product.product_variants[0]?.image_url || '/placeholder.png'} 
+                                src={currentVariant?.image_url || '/logo-vidaanimada.png'} 
                                 alt={product.name}
-                                width={500}
-                                height={500}
+                                width={500} height={500}
                                 style={{ objectFit: 'cover', borderRadius: '15px' }}
                             />
                         </div>
@@ -77,13 +86,14 @@ export default function ProductPage({ product }) {
                             
                             {availableColors.length > 0 && (
                                 <div className="variant-selector">
-                                    <label>Color: {selectedColor}</label>
+                                    <label>Color: <b>{selectedColor}</b></label>
                                     <div className="color-swatch-list">
                                         {availableColors.map(color => (
                                             <button key={color}
                                                 className={`color-swatch ${selectedColor === color ? 'active' : ''}`}
                                                 style={{ backgroundColor: product.product_variants.find(v => v.color_name === color)?.color_hex || '#ccc' }}
                                                 onClick={() => setSelectedColor(color)}
+                                                title={color}
                                             />
                                         ))}
                                     </div>
@@ -122,16 +132,12 @@ export default function ProductPage({ product }) {
     );
 }
 
-// Le dice a Next.js qué páginas de productos debe pre-construir
 export async function getStaticPaths() {
     const { data: products } = await supabase.from('products').select('id');
-    const paths = products.map(product => ({
-        params: { id: product.id.toString() },
-    }));
+    const paths = products.map(product => ({ params: { id: product.id.toString() } }));
     return { paths, fallback: 'blocking' };
 }
 
-// Busca los datos para una página de producto específica
 export async function getStaticProps({ params }) {
     const { data: product } = await supabase
         .from('products')

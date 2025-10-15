@@ -746,7 +746,40 @@ h2 {
     font-weight: bold;
     border: 2px solid white;
 }
+/* --- Estilos para la Gestión de Variantes --- */
+.variants-section {
+    margin-top: 3rem;
+    border-top: 1px solid #eee;
+    padding-top: 2rem;
+}
 
+.add-variant-form {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    align-items: center;
+}
+
+.add-variant-form h4 {
+    grid-column: 1 / -1;
+    font-family: var(--font-heading);
+    margin-bottom: 0.5rem;
+}
+
+.add-variant-form input {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.add-variant-form button {
+    padding: 12px;
+}
 /* --- Animación del Gradiente --- */
 @keyframes moveGradient {
     0% {

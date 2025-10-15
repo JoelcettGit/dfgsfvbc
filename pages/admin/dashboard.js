@@ -40,7 +40,7 @@ export default function AdminDashboard() {
             alert("Error al eliminar el producto: " + error.message);
         } else {
             alert(`Producto "${productName}" eliminado con éxito.`);
-            fetchProducts();
+            fetchProducts(); // Recargamos la lista de productos
         }
     };
 
@@ -111,7 +111,7 @@ function ProductFormView({ product, onBack, onSave }) {
     const [name, setName] = useState(product?.name || '');
     const [description, setDescription] = useState(product?.description || '');
     const [category, setCategory] = useState(product?.category || '');
-    const [basePrice, setBasePrice] = useState(product?.base_price || ''); // Estado para el precio
+    const [basePrice, setBasePrice] = useState(product?.base_price || '');
     const [tag, setTag] = useState(product?.tag || '');
     const [isSaving, setIsSaving] = useState(false);
     const [colors, setColors] = useState(product?.product_colors || []);
@@ -131,7 +131,7 @@ function ProductFormView({ product, onBack, onSave }) {
         if (!currentProduct) {
             const { data, error } = await supabase.from('products').insert(productData).select().single();
             if (error) { alert("Error al crear producto: " + error.message); setIsSaving(false); return; }
-            currentProduct = data;
+            product = data; // Actualiza el producto para que tenga ID y se puedan añadir variantes
              alert("Producto creado. Ahora puedes agregarle colores y variantes.");
         } else {
             const { error } = await supabase.from('products').update(productData).eq('id', currentProduct.id);
@@ -144,6 +144,10 @@ function ProductFormView({ product, onBack, onSave }) {
     
     const handleAddColor = async (e) => {
         e.preventDefault();
+        if (!product) {
+            alert("Primero debes guardar los datos generales del producto.");
+            return;
+        }
         if (!newImageFile) { alert("Por favor, selecciona una imagen para el color."); return; }
         
         const fileName = `${Date.now()}-${newImageFile.name.replace(/\s/g, '_')}`;
@@ -161,7 +165,7 @@ function ProductFormView({ product, onBack, onSave }) {
 
         if (error) { alert("Error al agregar color: " + error.message); } 
         else {
-            setColors([...colors, data]);
+            setColors([...colors, { ...data, product_variants: [] }]);
             setNewColorName(''); setNewColorHex('#CCCCCC'); setNewImageFile(null);
             document.getElementById('colorImageFile').value = '';
         }
@@ -184,10 +188,7 @@ function ProductFormView({ product, onBack, onSave }) {
                     <input type="text" placeholder="Nombre del Producto" value={name} onChange={e => setName(e.target.value)} required />
                     <textarea placeholder="Descripción" value={description} onChange={e => setDescription(e.target.value)} rows="3" />
                     <input type="text" placeholder="Categoría" value={category} onChange={e => setCategory(e.target.value)} required />
-                    
-                    {/* --- CORRECCIÓN DEFINITIVA: CAMPO DE PRECIO REINSERTADO --- */}
                     <input type="number" step="0.01" placeholder="Precio Base" value={basePrice} onChange={e => setBasePrice(e.target.value)} required />
-
                     <input type="text" placeholder="Etiqueta (ej: Destacado, Oferta)" value={tag} onChange={e => setTag(e.target.value)} />
                     <button type="submit" className="btn-primary" disabled={isSaving}>{isSaving ? "Guardando..." : "Guardar Datos Generales"}</button>
                 </form>
@@ -253,17 +254,9 @@ function VariantsModal({ color, onClose, onSave }) {
 
     const handleAddVariant = async (e) => {
         e.preventDefault();
-        const { data, error } = await supabase.from('product_variants').insert({
-            product_color_id: color.id,
-            size: newSize,
-            stock: newStock,
-        }).select().single();
-
+        const { data, error } = await supabase.from('product_variants').insert({ product_color_id: color.id, size: newSize, stock: newStock }).select().single();
         if (error) { alert("Error al agregar talle: " + error.message); }
-        else {
-            setVariants([...variants, data]);
-            setNewSize(''); setNewStock(0);
-        }
+        else { setVariants([...variants, data]); setNewSize(''); setNewStock(0); }
     };
 
     const handleDeleteVariant = async (variantId) => {
@@ -273,10 +266,7 @@ function VariantsModal({ color, onClose, onSave }) {
         else { setVariants(variants.filter(v => v.id !== variantId)); }
     };
     
-    const handleClose = () => {
-        onSave();
-        onClose();
-    };
+    const handleClose = () => { onSave(); onClose(); };
 
     return (
         <div className="modal-overlay">

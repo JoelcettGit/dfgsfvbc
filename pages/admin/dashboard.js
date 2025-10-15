@@ -111,7 +111,7 @@ function ProductFormView({ product, onBack, onSave }) {
     const [name, setName] = useState(product?.name || '');
     const [description, setDescription] = useState(product?.description || '');
     const [category, setCategory] = useState(product?.category || '');
-    const [basePrice, setBasePrice] = useState(product?.base_price || '');
+    const [basePrice, setBasePrice] = useState(product?.base_price || ''); // Estado para el precio
     const [tag, setTag] = useState(product?.tag || '');
     const [isSaving, setIsSaving] = useState(false);
     const [colors, setColors] = useState(product?.product_colors || []);

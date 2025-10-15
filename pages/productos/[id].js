@@ -2,7 +2,7 @@
 import Head from 'next/head';
 import Image from 'next/image';
 import { createClient } from '@supabase/supabase-js';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useCart } from '../../context/CartContext';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
@@ -12,35 +12,48 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.
 export default function ProductPage({ product }) {
     const { addToCart } = useCart();
     
+    // Estados para las selecciones del usuario
     const [selectedColor, setSelectedColor] = useState(null);
     const [selectedSize, setSelectedSize] = useState(null);
-    const [currentVariant, setCurrentVariant] = useState(null);
 
-    const availableColors = [...new Set(product.product_variants.map(v => v.color_name).filter(Boolean))];
-    const availableSizes = selectedColor 
-        ? [...new Set(product.product_variants.filter(v => v.color_name === selectedColor).map(v => v.size).filter(Boolean))]
-        : [...new Set(product.product_variants.map(v => v.size).filter(Boolean))];
+    // Derivamos listas únicas de colores y talles disponibles
+    const availableColors = useMemo(() => [...new Set(product.product_variants.map(v => v.color_name).filter(Boolean))], [product.product_variants]);
+    
+    const availableSizes = useMemo(() => {
+        // Si hay colores, muestra solo los talles para el color seleccionado
+        if (selectedColor) {
+            return [...new Set(product.product_variants.filter(v => v.color_name === selectedColor).map(v => v.size).filter(Boolean))];
+        }
+        // Si no hay colores, muestra todos los talles disponibles
+        return [...new Set(product.product_variants.map(v => v.size).filter(Boolean))];
+    }, [selectedColor, product.product_variants]);
 
+    // Efecto para setear la selección inicial cuando la página carga
     useEffect(() => {
-        if (availableColors.length > 0) setSelectedColor(availableColors[0]);
-        else setSelectedColor(null);
-
-        const initialSizes = availableColors.length > 0
-            ? [...new Set(product.product_variants.filter(v => v.color_name === availableColors[0]).map(v => v.size).filter(Boolean))]
-            : [...new Set(product.product_variants.map(v => v.size).filter(Boolean))];
-        
-        if (initialSizes.length > 0) setSelectedSize(initialSizes[0]);
-        else setSelectedSize(null);
-    // --- CORRECCIÓN AQUÍ: Se añaden las dependencias que faltaban ---
-    }, [product, availableColors]); 
-
+        if (availableColors.length > 0 && !selectedColor) {
+            setSelectedColor(availableColors[0]);
+        }
+        if (availableSizes.length > 0 && !selectedSize) {
+            setSelectedSize(availableSizes[0]);
+        }
+    }, [availableColors, availableSizes, selectedColor, selectedSize]);
+    
+    // Cuando se cambia un color, se resetea el talle al primero disponible para ese color
     useEffect(() => {
-        const variant = product.product_variants.find(v => 
-            (!v.color_name || v.color_name === selectedColor) && 
-            (!v.size || v.size === selectedSize)
-        );
-        setCurrentVariant(variant || product.product_variants[0]);
-    }, [selectedColor, selectedSize, product.product_variants]);
+        if (availableSizes.length > 0) {
+            setSelectedSize(availableSizes[0]);
+        }
+    }, [selectedColor, availableSizes]);
+
+
+    // Buscamos la variante que coincide con la selección actual
+    const currentVariant = useMemo(() => {
+        return product.product_variants.find(v => {
+            const colorMatch = availableColors.length === 0 || v.color_name === selectedColor;
+            const sizeMatch = availableSizes.length === 0 || v.size === selectedSize;
+            return colorMatch && sizeMatch;
+        });
+    }, [selectedColor, selectedSize, product.product_variants, availableColors, availableSizes]);
 
     const handleAddToCart = () => {
         if (currentVariant && currentVariant.stock > 0) {
@@ -69,6 +82,7 @@ export default function ProductPage({ product }) {
                                 alt={product.name}
                                 width={500} height={500}
                                 style={{ objectFit: 'cover', borderRadius: '15px' }}
+                                key={currentVariant?.id} // Forza a React a recargar la imagen
                             />
                         </div>
                         <div className="product-info-section">

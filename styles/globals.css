@@ -148,11 +148,13 @@ h2 {
 }
 
 .product-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 300px));
-  gap: 1.5rem;
-  margin-top: 2rem;
-  justify-content: center;
+    display: grid;
+    /* REEMPLAZA ESTA LÍNEA */
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    /* ... el resto de las propiedades se mantienen igual (gap, etc.) ... */
+    gap: 1.5rem;
+    margin-top: 2rem;
+    justify-content: center;
 }
 
 .product-card {
@@ -815,6 +817,114 @@ h2 {
     right: 0px;
     bottom: 0px;
     left: 0px;
+}
+/* --- Estilos para la Página de Detalle de Producto --- */
+.product-detail-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    text-align: left;
+}
+@media (min-width: 768px) {
+    .product-detail-layout {
+        grid-template-columns: 1fr 1fr;
+        gap: 4rem;
+    }
+}
+.product-image-section img {
+    width: 100%;
+    height: auto;
+}
+.product-info-section h1 {
+    font-family: var(--font-body); /* Usamos una fuente más legible */
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+.product-info-section .price {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--color-pink);
+    margin-bottom: 1.5rem;
+}
+.product-info-section .description {
+    color: #555;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+.variant-selector {
+    margin-bottom: 1.5rem;
+}
+.variant-selector label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+.color-swatch-list, .size-button-list {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.color-swatch {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.color-swatch:hover {
+    transform: scale(1.1);
+}
+.color-swatch.active {
+    border-color: var(--color-dark-text);
+}
+.size-button {
+    padding: 8px 16px;
+    border: 2px solid #ddd;
+    background: white;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.size-button:hover {
+    border-color: #aaa;
+}
+.size-button.active {
+    background: var(--color-dark-text);
+    color: white;
+    border-color: var(--color-dark-text);
+}
+.stock-info {
+    margin: 1.5rem 0;
+    font-weight: bold;
+    color: #888;
+}
+.add-to-cart-btn {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.1rem;
+}
+.add-to-cart-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+/* --- Estilo para la Etiqueta del Producto --- */
+.product-card {
+    position: relative; /* Necesario para posicionar la etiqueta */
+}
+
+.product-tag {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background-color: var(--color-pink);
+    color: var(--color-dark-text);
+    padding: 5px 12px;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    z-index: 10;
 }
 /* --- Animación del Gradiente --- */
 @keyframes moveGradient {

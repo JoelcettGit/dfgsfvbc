@@ -55,8 +55,6 @@ export default function AdminDashboard() {
 
     const handleAddProduct = async (e) => {
         e.preventDefault();
-        // LÍNEA DE DIAGNÓSTICO:
-        console.log("Verificando sesión antes de agregar:", await supabase.auth.getSession());
         if (!newImageFile) { alert("Por favor, selecciona una imagen."); return; }
         setIsAddingProduct(true);
         try {

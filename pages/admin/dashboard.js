@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
+import { SketchPicker } from 'react-color'; // Importa el selector de color
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
@@ -68,7 +69,6 @@ export default function AdminDashboard() {
                 <p>Bienvenido, {user?.email}</p>
                 <button onClick={handleLogout} className="btn-secondary">Cerrar Sesión</button>
             </header>
-
             <main className="admin-main">
                 {view === 'list' && (
                     <ProductListView products={products} onAddNew={handleAddNewProduct} onEdit={handleEditProduct} />
@@ -83,7 +83,6 @@ export default function AdminDashboard() {
 
 // --- VISTA DE LISTA DE PRODUCTOS ---
 function ProductListView({ products, onAddNew, onEdit }) {
-    // ... (Este componente no cambia)
     return (
         <div className="admin-section">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -111,7 +110,7 @@ function ProductListView({ products, onAddNew, onEdit }) {
     );
 }
 
-// --- VISTA DE FORMULARIO PARA AGREGAR/EDITAR PRODUCTOS (CON GESTIÓN DE VARIANTES) ---
+// --- VISTA DE FORMULARIO PARA AGREGAR/EDITAR PRODUCTOS ---
 function ProductFormView({ product, onBack, onSave }) {
     const [name, setName] = useState(product?.name || '');
     const [description, setDescription] = useState(product?.description || '');
@@ -121,7 +120,9 @@ function ProductFormView({ product, onBack, onSave }) {
     const [isSaving, setIsSaving] = useState(false);
 
     // Estados para el formulario de NUEVA VARIANTE
-    const [newVariantColor, setNewVariantColor] = useState('');
+    const [newVariantColorName, setNewVariantColorName] = useState('');
+    const [newVariantColorHex, setNewVariantColorHex] = useState('#CCCCCC');
+    const [displayColorPicker, setDisplayColorPicker] = useState(false);
     const [newVariantSize, setNewVariantSize] = useState('');
     const [newVariantStock, setNewVariantStock] = useState(0);
     const [newVariantImageFile, setNewVariantImageFile] = useState(null);
@@ -129,22 +130,21 @@ function ProductFormView({ product, onBack, onSave }) {
     const handleSaveProduct = async (e) => {
         e.preventDefault();
         setIsSaving(true);
-        
         const productData = { name, description, category, base_price: basePrice };
-        let currentProduct = product;
+        let currentProductId = product?.id;
 
-        if (!currentProduct) {
+        if (!currentProductId) {
             const { data, error } = await supabase.from('products').insert(productData).select().single();
             if (error) { alert("Error al crear el producto: " + error.message); setIsSaving(false); return; }
-            currentProduct = data;
+            currentProductId = data.id;
         } else {
-            const { error } = await supabase.from('products').update(productData).eq('id', currentProduct.id);
+            const { error } = await supabase.from('products').update(productData).eq('id', currentProductId);
             if (error) { alert("Error al actualizar el producto: " + error.message); setIsSaving(false); return; }
         }
         
-        alert("Datos generales guardados. Ahora puedes gestionar las variantes.");
+        alert("Datos generales guardados.");
         setIsSaving(false);
-        onSave();
+        onSave(); // Refresca la lista de productos en la vista principal
     };
 
     const handleAddVariant = async (e) => {
@@ -159,16 +159,23 @@ function ProductFormView({ product, onBack, onSave }) {
 
         const { data, error } = await supabase.from('product_variants').insert({
             product_id: product.id,
-            color_name: newVariantColor,
+            color_name: newVariantColorName,
+            color_hex: newVariantColorHex,
             size: newVariantSize,
             stock: newVariantStock,
             image_url: publicUrl,
         }).select().single();
 
-        if (error) { alert("Error al agregar la variante: " + error.message); } 
-        else {
+        if (error) {
+            alert("Error al agregar la variante: " + error.message);
+        } else {
             setVariants([...variants, data]);
-            setNewVariantColor(''); setNewVariantSize(''); setNewVariantStock(0); setNewVariantImageFile(null);
+            // Limpiar formulario de variante
+            setNewVariantColorName('');
+            setNewVariantColorHex('#CCCCCC');
+            setNewVariantSize('');
+            setNewVariantStock(0);
+            setNewVariantImageFile(null);
             document.getElementById('variantImageFile').value = '';
         }
     };
@@ -200,7 +207,6 @@ function ProductFormView({ product, onBack, onSave }) {
             {product && (
                 <div className="variants-section">
                     <h3>Variantes del Producto</h3>
-                    {/* Lista de variantes existentes */}
                     <div className="table-container">
                         <table className="products-table">
                             <thead><tr><th>Imagen</th><th>Color</th><th>Talle</th><th>Stock</th><th>Acciones</th></tr></thead>
@@ -218,10 +224,23 @@ function ProductFormView({ product, onBack, onSave }) {
                         </table>
                     </div>
 
-                    {/* Formulario para agregar nueva variante */}
                     <form onSubmit={handleAddVariant} className="add-variant-form">
                         <h4>Agregar Nueva Variante</h4>
-                        <input type="text" placeholder="Nombre del Color (ej: Negro)" value={newVariantColor} onChange={e => setNewVariantColor(e.target.value)} />
+                        <input type="text" placeholder="Nombre del Color (ej: Negro)" value={newVariantColorName} onChange={e => setNewVariantColorName(e.target.value)} />
+                        
+                        <div className="color-picker-wrapper">
+                            <label>Elegir Color Hex</label>
+                            <div className="color-swatch" onClick={() => setDisplayColorPicker(!displayColorPicker)}>
+                                <div className="color-preview" style={{ background: newVariantColorHex }} />
+                            </div>
+                            {displayColorPicker ? (
+                                <div className="color-popover">
+                                    <div className="color-cover" onClick={() => setDisplayColorPicker(false)} />
+                                    <SketchPicker color={newVariantColorHex} onChange={(color) => setNewVariantColorHex(color.hex)} />
+                                </div>
+                            ) : null}
+                        </div>
+
                         <input type="text" placeholder="Talle (ej: S, M, Único)" value={newVariantSize} onChange={e => setNewVariantSize(e.target.value)} />
                         <input type="number" placeholder="Stock" value={newVariantStock} onChange={e => setNewVariantStock(e.target.value)} required/>
                         <input type="file" id="variantImageFile" onChange={e => setNewVariantImageFile(e.target.files[0])} required />

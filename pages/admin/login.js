@@ -1,16 +1,31 @@
-// pages/admin/login.js
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // 1. Importa useEffect
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
     const router = useRouter();
+
+    // 2. NUEVA LÓGICA DE REDIRECCIÓN
+    useEffect(() => {
+        const checkSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                // Si ya hay una sesión activa, redirige al dashboard
+                router.push('/admin/dashboard');
+            }
+        };
+
+        checkSession();
+    }, [router]);
 
     const handleLogin = async (e) => {
         e.preventDefault();

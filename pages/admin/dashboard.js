@@ -126,19 +126,34 @@ function ProductFormView({ product, onBack, onSave }) {
     const [newImageFile, setNewImageFile] = useState(null);
     const [managingVariantsForColor, setManagingVariantsForColor] = useState(null);
 
+    // --- useEffect CORREGIDO ---
     useEffect(() => {
-        if (product && product.product_colors.length > 0) {
-            const firstColor = product.product_colors[0];
-            const hasComplexVariants = product.product_colors.length > 1 || firstColor.color_name !== 'Default' || firstColor.product_variants.some(v => v.size !== 'Único');
-            
-            if (hasComplexVariants) {
-                setProductType('variable');
+        if (product) {
+            // Verifica si la propiedad product_colors existe y tiene al menos un elemento
+            if (product.product_colors && product.product_colors.length > 0) {
+                const firstColor = product.product_colors[0];
+                // Verifica si la propiedad product_variants existe en el primer color
+                const variantsExist = firstColor.product_variants && firstColor.product_variants.length > 0;
+                
+                const hasComplexVariants = product.product_colors.length > 1 || 
+                                         firstColor.color_name !== 'Default' || 
+                                         (variantsExist && firstColor.product_variants.some(v => v.size !== 'Único'));
+                
+                if (hasComplexVariants) {
+                    setProductType('variable');
+                } else {
+                    setProductType('simple');
+                    // Acceso seguro al stock
+                    setSimpleStock(variantsExist ? firstColor.product_variants[0].stock : 0); 
+                }
             } else {
-                setProductType('simple');
-                setSimpleStock(firstColor.product_variants[0]?.stock || 0);
+                // Si el producto existe pero aún no tiene colores (recién creado),
+                // mantenemos el tipo que ya estaba seleccionado o default ('variable')
+                setProductType(prevType => prevType || 'variable');
             }
-        } else if (!product) {
-            setProductType('variable'); // Por defecto para productos nuevos
+        } else {
+            // Producto nuevo, por defecto es variable
+            setProductType('variable');
         }
     }, [product]);
 
@@ -147,24 +162,25 @@ function ProductFormView({ product, onBack, onSave }) {
         setIsSaving(true);
         const productData = { name, description, category, base_price: parseFloat(basePrice), tag };
         let currentProduct = product;
+        let isNewProduct = !currentProduct;
 
         try {
-            if (!currentProduct) {
+            if (isNewProduct) {
                 const { data, error } = await supabase.from('products').insert(productData).select().single();
                 if (error) throw error;
                 currentProduct = data;
-                product = data; // Actualiza la prop para que la sección de variantes aparezca
+                product = data; // Actualiza la prop localmente
             } else {
                 const { error } = await supabase.from('products').update(productData).eq('id', currentProduct.id);
                 if (error) throw error;
             }
 
             if (productType === 'simple') {
-                if (!simpleImageFile && !product?.product_colors[0]?.image_url) {
+                if (!simpleImageFile && !currentProduct?.product_colors?.[0]?.image_url) {
                     throw new Error("Debes seleccionar una imagen para el producto simple.");
                 }
 
-                let imageUrl = product?.product_colors[0]?.image_url;
+                let imageUrl = currentProduct?.product_colors?.[0]?.image_url;
                 if (simpleImageFile) {
                     const fileName = `${Date.now()}-${simpleImageFile.name.replace(/\s/g, '_')}`;
                     const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, simpleImageFile);
@@ -174,7 +190,7 @@ function ProductFormView({ product, onBack, onSave }) {
                 }
                 
                 const { data: colorData, error: colorError } = await supabase.from('product_colors').upsert({
-                    id: product?.product_colors[0]?.id,
+                    id: currentProduct?.product_colors?.[0]?.id,
                     product_id: currentProduct.id,
                     color_name: 'Default',
                     color_hex: '#FFFFFF',
@@ -183,7 +199,7 @@ function ProductFormView({ product, onBack, onSave }) {
                 if (colorError) throw colorError;
 
                 const { error: variantError } = await supabase.from('product_variants').upsert({
-                    id: product?.product_colors[0]?.product_variants[0]?.id,
+                    id: currentProduct?.product_colors?.[0]?.product_variants?.[0]?.id,
                     product_color_id: colorData.id,
                     size: 'Único',
                     stock: parseInt(simpleStock, 10)
@@ -191,11 +207,15 @@ function ProductFormView({ product, onBack, onSave }) {
                 if (variantError) throw variantError;
             }
 
-            alert(product ? "Producto actualizado con éxito." : "Producto creado con éxito.");
-            onSave();
+            alert(isNewProduct ? "Producto creado con éxito." : "Producto actualizado con éxito.");
+            onSave(); // Refresca la lista principal
+            if (isNewProduct && productType === 'simple') {
+                 onBack(); 
+            }
             
         } catch (error) {
-            alert("Error: " + error.message);
+            console.error("Error detallado al guardar:", error);
+            alert("Error al guardar el producto: " + error.message);
         } finally {
             setIsSaving(false);
         }
@@ -251,7 +271,7 @@ function ProductFormView({ product, onBack, onSave }) {
                                 <label htmlFor="simpleImageFile">Imagen del Producto</label>
                                 <input type="file" id="simpleImageFile" accept="image/*" onChange={(e) => setSimpleImageFile(e.target.files[0])} />
                                 {simpleImageFile && <p className="selected-file-name">{simpleImageFile.name}</p>}
-                                {!simpleImageFile && product?.product_colors[0]?.image_url && <p className="selected-file-name">Imagen actual: <a href={product.product_colors[0].image_url} target="_blank" rel="noopener noreferrer">Ver</a></p>}
+                                {!simpleImageFile && product?.product_colors?.[0]?.image_url && <p className="selected-file-name">Imagen actual: <a href={product.product_colors[0].image_url} target="_blank" rel="noopener noreferrer">Ver</a></p>}
                             </div>
                         </>
                     )}

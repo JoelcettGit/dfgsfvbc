@@ -189,17 +189,21 @@ export default function ProductPage({ product, recommendedProducts }) {
                 if (!product.bundle_links || product.bundle_links.length === 0) {
                     return [{ url: '/logo-vidaanimada.png', alt: product.name }];
                 }
-                // Mapea CADA componente a su imagen (puede haber duplicados si tienen la misma imagen)
+                
+                // --- ¡CAMBIO EN LA LÓGICA DE BUNDLE AQUÍ! ---
+                // Queremos las imágenes de los productos componentes, no de sus variantes específicas,
+                // para que la galería sea estable.
                 const bundleImages = product.bundle_links.map(link => {
-                    // NO usamos selectedBundleVariants aquí para que la lista de thumbs sea estable
-                    const firstVariantOption = link.product_variants_options?.[0]; // Tomamos la primera opción como representativa
-                    const imageUrl = firstVariantOption?.variant_image_url || link.component_product?.image_url || '/logo-vidaanimada.png';
-                    const altText = `${link.component_product?.name || 'Pieza'}`;
+                    const imageUrl = link.component_product?.image_url || '/logo-vidaanimada.png';
+                    const altText = link.component_product?.name || 'Componente';
                     return { url: imageUrl, alt: altText };
-                }).filter(img => img.url);
-                // Evitar duplicados si ambas piezas usan la misma imagen (opcional)
+                }).filter(img => img.url); // Asegurarse de que no haya URLs nulas
+
+                // Eliminar duplicados si múltiples componentes usan la misma imagen base
                 const uniqueImages = Array.from(new Map(bundleImages.map(img => [img.url, img])).values());
+                
                 return uniqueImages.length > 0 ? uniqueImages : [{ url: '/logo-vidaanimada.png', alt: product.name }];
+
             default:
                 return [{ url: '/logo-vidaanimada.png', alt: 'Producto' }];
         }

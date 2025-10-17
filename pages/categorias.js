@@ -81,7 +81,7 @@ export default function CategoriasPage({ allProducts }) {
 }
 
 export async function getStaticProps() {
-    const supabase = createClient(process.env.NEXT_PUBLIC_supabase_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     
     // --- CONSULTA CORREGIDA ---
     const { data: allProducts, error } = await supabase

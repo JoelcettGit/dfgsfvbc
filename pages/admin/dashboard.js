@@ -6,16 +6,6 @@ import { SketchPicker } from 'react-color';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-// Función para llamar a la API de revalidación
-async function revalidateStaticPages() {
-    try {
-        await fetch(`/api/revalidate?secret=${process.env.NEXT_PUBLIC_REVALIDATE_TOKEN}`);
-        console.log("Petición de revalidación enviada.");
-    } catch (error) {
-        console.error("Error al revalidar:", error);
-    }
-}
-
 // --- COMPONENTE PRINCIPAL ---
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
@@ -34,17 +24,27 @@ export default function AdminDashboard() {
         checkUserAndFetchProducts();
     }, [router]);
 
+    // LA CORRECCIÓN CLAVE ESTÁ AQUÍ
     const fetchProducts = async () => {
         setIsLoading(true);
-        const { data, error } = await supabase.from('products').select(`*, product_variants(*)`).order('id', { ascending: false });
+        const { data, error } = await supabase
+            .from('products')
+            .select(`
+                *,
+                product_colors (
+                    *,
+                    product_variants (*)
+                )
+            `)
+            .order('id', { ascending: false });
+
         if (error) console.error("Error al cargar productos:", error.message);
         else setProducts(data || []);
         setIsLoading(false);
     };
-
     const handleDeleteProduct = async (productId, productName) => {
         if (!confirm(`¿Estás seguro de que quieres eliminar "${productName}" y todas sus variantes? Esta acción es permanente.`)) return;
-        
+
         const { error } = await supabase.from('products').delete().eq('id', productId);
         if (error) {
             alert("Error al eliminar el producto: " + error.message);
@@ -71,7 +71,7 @@ export default function AdminDashboard() {
                 <h1>Dashboard</h1>
                 <p>Bienvenido, {user?.email}</p>
                 <div>
-                    <button onClick={() => router.push('/')} className="btn-secondary" style={{marginRight: '1rem'}}>Ver Tienda</button>
+                    <button onClick={() => router.push('/')} className="btn-secondary" style={{ marginRight: '1rem' }}>Ver Tienda</button>
                     <button onClick={handleLogout} className="btn-secondary">Cerrar Sesión</button>
                 </div>
             </header>
@@ -126,7 +126,7 @@ function ProductFormView({ product, onBack, onSave }) {
     const [basePrice, setBasePrice] = useState(product?.base_price || '');
     const [tag, setTag] = useState(product?.tag || '');
     const [isSaving, setIsSaving] = useState(false);
-    
+
     const [hasVariants, setHasVariants] = useState(product?.has_variants || false);
     const [simpleStock, setSimpleStock] = useState(product?.stock || 0);
     const [simpleImageFile, setSimpleImageFile] = useState(null);
@@ -169,14 +169,14 @@ function ProductFormView({ product, onBack, onSave }) {
                 const { data, error } = await supabase.from('products').insert(productData).select().single();
                 if (error) throw error;
                 currentProductId = data.id;
-                 alert("Producto creado.");
-                 product = data;
+                alert("Producto creado.");
+                product = data;
             } else {
                 const { error } = await supabase.from('products').update(productData).eq('id', currentProductId);
                 if (error) throw error;
                 alert("Producto actualizado.");
             }
-            
+
             await revalidateStaticPages();
             onSave();
 
@@ -187,7 +187,7 @@ function ProductFormView({ product, onBack, onSave }) {
             setIsSaving(false);
         }
     };
-    
+
     const handleAddVariant = async (e) => {
         e.preventDefault();
         if (!product) { alert("Guarda primero los datos generales del producto."); return; }
@@ -210,11 +210,11 @@ function ProductFormView({ product, onBack, onSave }) {
             variant_image_url: variantImageUrl
         }).select().single();
 
-        if (error) { alert("Error al agregar variante: " + error.message); } 
+        if (error) { alert("Error al agregar variante: " + error.message); }
         else {
             setVariants([...variants, data]);
             setNewVariantColorName(''); setNewVariantColorHex('#CCCCCC'); setNewVariantSize(''); setNewVariantStock(0); setNewVariantImageFile(null);
-            if(document.getElementById('newVariantImageFile')) document.getElementById('newVariantImageFile').value = '';
+            if (document.getElementById('newVariantImageFile')) document.getElementById('newVariantImageFile').value = '';
             await revalidateStaticPages();
         }
     };
@@ -223,16 +223,16 @@ function ProductFormView({ product, onBack, onSave }) {
         if (!confirm("¿Seguro que quieres eliminar esta variante?")) return;
         const { error } = await supabase.from('product_variants').delete().eq('id', variantId);
         if (error) { alert("Error al eliminar variante: " + error.message); }
-        else { 
+        else {
             setVariants(variants.filter(v => v.id !== variantId));
             await revalidateStaticPages();
         }
     };
 
-     const handleEditVariantClick = (variant) => {
+    const handleEditVariantClick = (variant) => {
         setManagingVariant(variant);
     };
-    
+
     const handleSaveVariantChanges = (updatedVariant) => {
         setVariants(variants.map(v => v.id === updatedVariant.id ? updatedVariant : v));
         setManagingVariant(null);
@@ -255,7 +255,7 @@ function ProductFormView({ product, onBack, onSave }) {
                     <input type="text" placeholder="Categoría" value={category} onChange={e => setCategory(e.target.value)} required />
                     <input type="number" step="0.01" placeholder="Precio Base" value={basePrice} onChange={e => setBasePrice(e.target.value)} required />
                     <input type="text" placeholder="Etiqueta (ej: Destacado)" value={tag} onChange={e => setTag(e.target.value)} />
-                    
+
                     {!hasVariants && (
                         <>
                             <input type="number" placeholder="Stock" value={simpleStock} onChange={e => setSimpleStock(e.target.value)} required />
@@ -281,7 +281,7 @@ function ProductFormView({ product, onBack, onSave }) {
                                     {variants.map(v => (
                                         <tr key={v.id}>
                                             <td><Image src={v.variant_image_url || product.image_url || '/logo-vidaanimada.png'} alt={`${v.color_name} ${v.size}`} width={50} height={50} className="table-product-image" /></td>
-                                            <td><div style={{display:'flex', alignItems:'center', gap:'8px'}}><span style={{width:'20px', height:'20px', backgroundColor:v.color_hex || '#fff', borderRadius:'50%', border:'1px solid #eee'}}></span>{v.color_name || '-'}</div></td>
+                                            <td><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '20px', height: '20px', backgroundColor: v.color_hex || '#fff', borderRadius: '50%', border: '1px solid #eee' }}></span>{v.color_name || '-'}</div></td>
                                             <td>{v.size || '-'}</td>
                                             <td>{v.stock} u.</td>
                                             <td className="variant-actions">
@@ -302,8 +302,8 @@ function ProductFormView({ product, onBack, onSave }) {
                                 {displayColorPicker ? (<div className="color-popover"><div className="color-cover" onClick={() => setDisplayColorPicker(false)} /><SketchPicker color={newVariantColorHex} onChange={(color) => setNewVariantColorHex(color.hex)} /></div>) : null}
                             </div>
                             <input type="text" placeholder="Talle" value={newVariantSize} onChange={e => setNewVariantSize(e.target.value)} />
-                            <input type="number" placeholder="Stock" value={newVariantStock} onChange={e => setNewVariantStock(e.target.value)} required/>
-                             <div className="file-input-container">
+                            <input type="number" placeholder="Stock" value={newVariantStock} onChange={e => setNewVariantStock(e.target.value)} required />
+                            <div className="file-input-container">
                                 <label htmlFor="newVariantImageFile">Imagen Específica (Opcional)</label>
                                 <input type="file" id="newVariantImageFile" accept="image/*" onChange={e => setNewVariantImageFile(e.target.files[0])} />
                                 {newVariantImageFile && <p className="selected-file-name">{newVariantImageFile.name}</p>}
@@ -313,12 +313,12 @@ function ProductFormView({ product, onBack, onSave }) {
                     </div>
                 )}
             </div>
-            
+
             {managingVariant && (
-                <EditVariantModal 
-                    variant={managingVariant} 
-                    onClose={() => setManagingVariant(null)} 
-                    onSave={handleSaveVariantChanges} 
+                <EditVariantModal
+                    variant={managingVariant}
+                    onClose={() => setManagingVariant(null)}
+                    onSave={handleSaveVariantChanges}
                 />
             )}
         </>

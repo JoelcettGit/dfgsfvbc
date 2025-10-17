@@ -45,14 +45,14 @@ export default function CategoriasPage({ allProducts }) {
                     </div>
                     <div className="product-grid">
                         {filteredProducts.map((product) => (
-                           <Link href={`/productos/${product.id}`} key={product.id}>
-                             <div className="product-card" style={{cursor: 'pointer'}}>
-                               {product.tag && <span className="product-tag">{product.tag}</span>}
-                               <Image src={product.product_colors[0]?.image_url || '/logo-vidaanimada.png'} alt={product.name} width={300} height={280} style={{ objectFit: 'cover' }}/>
-                               <h4>{product.name}</h4>
-                               <p className="price">Desde ${product.base_price}</p>
-                             </div>
-                           </Link>
+                            <Link href={`/productos/${product.id}`} key={product.id}>
+                                <div className="product-card" style={{ cursor: 'pointer' }}>
+                                    {product.tag && <span className="product-tag">{product.tag}</span>}
+                                    <Image src={product.product_colors[0]?.image_url || '/logo-vidaanimada.png'} alt={product.name} width={300} height={280} style={{ objectFit: 'cover' }} />
+                                    <h4>{product.name}</h4>
+                                    <p className="price">Desde ${product.base_price}</p>
+                                </div>
+                            </Link>
                         ))}
                     </div>
                 </section>
@@ -64,8 +64,17 @@ export default function CategoriasPage({ allProducts }) {
 
 export async function getStaticProps() {
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
+    // LA CORRECCIÓN CLAVE ESTÁ AQUÍ
     const { data: allProducts } = await supabase
-      .from('products')
-      .select('*, product_colors(*, product_variants(*))'); // Consulta anidada correcta
+        .from('products')
+        .select(`
+        *,
+        product_colors (
+            *,
+            product_variants (*)
+        )
+      `);
+
     return { props: { allProducts: allProducts || [] }, revalidate: 10 };
 }

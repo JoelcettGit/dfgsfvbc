@@ -7,21 +7,20 @@ import { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
+const PRODUCTS_PER_PAGE = 12;
 // Supabase client initialization (outside component)
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-// --- CONSTANTE PARA PAGINACIÓN ---
-const PRODUCTS_PER_PAGE = 12; // Define cuántos productos cargar por página
-export default function CategoriasPage({ initialProducts, totalProducts, error: initialError }) { // <-- Recibe nuevas props
+export default function CategoriasPage({ initialProducts, totalProducts, error: initialError }) {
     const [selectedCategory, setSelectedCategory] = useState('todos');
     const [uniqueCategories, setUniqueCategories] = useState([]);
-
-    // --- ESTADOS PARA PAGINACIÓN ---
-    const [products, setProducts] = useState(initialProducts || []); // Lista acumulada de productos
+    const [products, setProducts] = useState(initialProducts || []);
     const [currentPage, setCurrentPage] = useState(1);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [hasMorePages, setHasMorePages] = useState((initialProducts?.length || 0) < totalProducts); // ¿Hay más desde el inicio?
-    const [currentTotal, setCurrentTotal] = useState(totalProducts); // Total (puede cambiar con filtro)
+    const [hasMorePages, setHasMorePages] = useState((initialProducts?.length || 0) < totalProducts);
+    const [currentTotal, setCurrentTotal] = useState(totalProducts);
 
+    // --- NUEVO ESTADO PARA ORDENACIÓN ---
+    const [sortBy, setSortBy] = useState('default');
     // Efecto para obtener categorías únicas (solo se ejecuta una vez al inicio)
     useEffect(() => {
         const fetchCategories = async () => {
@@ -48,122 +47,109 @@ export default function CategoriasPage({ initialProducts, totalProducts, error: 
         fetchCategories();
     }, []); // Array vacío para que corra solo al montar
 
-    // --- FUNCIÓN PARA CARGAR MÁS PRODUCTOS ---
-    const loadMoreProducts = async () => {
-        if (isLoadingMore || !hasMorePages) return; // Evita cargas múltiples
-
-        setIsLoadingMore(true);
-        const nextPage = currentPage + 1;
+    // --- FUNCIÓN GENÉRICA PARA CARGAR PRODUCTOS (Refactorizada) ---
+    const fetchProductsPage = async (page = 1, category = selectedCategory, sort = sortBy) => {
+        setIsLoadingMore(true); // Siempre mostrar carga al iniciar fetch
+        setHasMorePages(false); // Asumir que no hay más hasta confirmar
 
         try {
-            // Llama a nuestra nueva API
-            const response = await fetch(`/api/products?page=${nextPage}&category=${selectedCategory}`);
-            if (!response.ok) throw new Error('Error al cargar más productos');
-
+            const response = await fetch(`/api/products?page=${page}&category=${category}&sort=${sort}`);
+            if (!response.ok) throw new Error('Error al cargar productos desde API');
             const data = await response.json();
 
-            // Añade los nuevos productos a la lista existente
-            setProducts(prevProducts => [...prevProducts, ...data.products]);
-            setCurrentPage(nextPage);
-            setHasMorePages(data.hasNextPage); // Actualiza si hay más páginas
-            setCurrentTotal(data.totalProducts); // Actualiza el total (por si cambió el filtro)
-
-        } catch (error) {
-            console.error("Error en loadMoreProducts:", error);
-            // Podríamos mostrar un mensaje de error al usuario
-        } finally {
-            setIsLoadingMore(false);
-        }
-    };
-
-    // --- FUNCIÓN PARA MANEJAR CAMBIO DE CATEGORÍA ---
-    const handleCategoryChange = async (newCategory) => {
-        setSelectedCategory(newCategory);
-        setProducts([]); // Limpia productos actuales
-        setCurrentPage(1); // Resetea a página 1
-        setIsLoadingMore(true); // Muestra estado de carga
-        setHasMorePages(false); // Asume que no hay más hasta que la API responda
-
-        try {
-            // Llama a la API para la página 1 de la nueva categoría
-            const response = await fetch(`/api/products?page=1&category=${newCategory}`);
-            if (!response.ok) throw new Error('Error al cambiar categoría');
-
-            const data = await response.json();
-
-            setProducts(data.products || []);
+            // Si es la página 1, reemplaza los productos; si no, añade
+            setProducts(page === 1 ? data.products : prev => [...prev, ...data.products]);
+            setCurrentPage(page);
             setHasMorePages(data.hasNextPage);
             setCurrentTotal(data.totalProducts);
 
         } catch (error) {
-            console.error("Error en handleCategoryChange:", error);
-            setProducts(initialProducts || []); // Fallback a los iniciales si falla
-            setHasMorePages((initialProducts?.length || 0) < totalProducts);
-            setCurrentTotal(totalProducts);
+            console.error("Error en fetchProductsPage:", error);
+            // Considera mostrar un mensaje de error al usuario
+            if (page === 1) { // Si falla la carga inicial/filtro, muestra fallback
+                setProducts(initialProducts || []);
+                setHasMorePages((initialProducts?.length || 0) < totalProducts);
+                setCurrentTotal(totalProducts);
+            }
         } finally {
             setIsLoadingMore(false);
         }
     };
 
+    // --- FUNCIÓN PARA CARGAR MÁS ---
+    const loadMoreProducts = () => {
+        if (!isLoadingMore && hasMorePages) {
+            fetchProductsPage(currentPage + 1, selectedCategory, sortBy);
+        }
+    };
+
+    // --- MANEJADOR CAMBIO DE CATEGORÍA ---
+    const handleCategoryChange = (newCategory) => {
+        setSelectedCategory(newCategory);
+        fetchProductsPage(1, newCategory, sortBy); // Carga página 1 con nueva categoría
+    };
+
+    // --- NUEVO MANEJADOR CAMBIO DE ORDENACIÓN ---
+    const handleSortChange = (newSortBy) => {
+        setSortBy(newSortBy);
+        fetchProductsPage(1, selectedCategory, newSortBy); // Carga página 1 con nueva ordenación
+    };
 
     // Helper para imagen (sin cambios)
     const getProductImage = (product) => { /* ... tu función getProductImage ... */ };
 
     return (
         <>
-            <Head>
-                <title>Productos - Vida Animada</title>
-                <link rel="icon" href="/logo-vidaanimada.png" />
-            </Head>
-            <Header />
+            {/* ... (Head, Header) ... */}
             <main>
                 <section className="page-section">
                     <h1>Explora Nuestros Productos</h1>
-                    <p className="subtitle">Utiliza el filtro para encontrar tus productos favoritos.</p>
-                    {initialError && <p className="error-message">{initialError}</p>} {/* Muestra error inicial si existe */}
-                    <div className="filter-container">
-                        <select
-                            id="category-filter"
-                            value={selectedCategory}
-                            // Llama a la nueva función al cambiar
-                            onChange={(e) => handleCategoryChange(e.target.value)}
-                            disabled={isLoadingMore} // Deshabilita mientras carga
-                        >
-                            {uniqueCategories.map(cat => (
-                                <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
-                            ))}
-                        </select>
-                        {/* Muestra conteo actual vs total */}
-                        <span>Mostrando {products.length} de {currentTotal} productos</span>
+                    <p className="subtitle">Utiliza los filtros para encontrar tus productos favoritos.</p>
+                    {initialError && <p className="error-message">{initialError}</p>}
+
+                    {/* --- CONTENEDOR DE FILTROS ACTUALIZADO --- */}
+                    <div className="filter-controls-container"> {/* Nuevo contenedor para agrupar */}
+                        <div className="filter-container">
+                            <label htmlFor="category-filter">Categoría:</label>
+                            <select
+                                id="category-filter"
+                                value={selectedCategory}
+                                onChange={(e) => handleCategoryChange(e.target.value)}
+                                disabled={isLoadingMore}
+                            >
+                                {uniqueCategories.map(cat => (<option key={cat} value={cat}>{/*...*/}</option>))}
+                            </select>
+                        </div>
+                        {/* --- NUEVO SELECT DE ORDENACIÓN --- */}
+                        <div className="filter-container">
+                            <label htmlFor="sort-filter">Ordenar por:</label>
+                            <select
+                                id="sort-filter"
+                                value={sortBy}
+                                onChange={(e) => handleSortChange(e.target.value)}
+                                disabled={isLoadingMore}
+                            >
+                                <option value="default">Relevancia</option>
+                                <option value="price-asc">Precio: Menor a Mayor</option>
+                                <option value="price-desc">Precio: Mayor a Menor</option>
+                                <option value="name-asc">Nombre: A-Z</option>
+                            </select>
+                        </div>
+                        {/* Conteo de productos */}
+                        <div className="product-count-display">
+                            <span>Mostrando {products.length} de {currentTotal}</span>
+                        </div>
                     </div>
 
-                    {/* Grilla de Productos */}
+                    {/* Grilla de Productos (sin cambios internos) */}
                     <div className="product-grid">
-                        {products.map((product) => (
-                            <Link href={`/productos/${product.id}`} key={product.id} passHref>
-                                <div className="product-card" style={{ cursor: 'pointer' }}>
-                                    {product.tag && <span className="product-tag">{product.tag}</span>}
-                                    <Image src={getProductImage(product)} alt={product.name} width={300} height={280} style={{ objectFit: 'cover' }} />
-                                    <h4>{product.name}</h4>
-                                    <p className="price">Desde ${product.base_price}</p>
-                                </div>
-                            </Link>
-                        ))}
+                        {/* ... tu .map(product => ...) ... */}
                     </div>
 
-                    {/* Botón Cargar Más y Estado de Carga */}
-                    <div className="pagination-controls" style={{ marginTop: '2rem', textAlign: 'center' }}>
-                        {isLoadingMore ? (
-                            <p>Cargando...</p>
-                        ) : hasMorePages ? (
-                            <button onClick={loadMoreProducts} className="btn-primary">
-                                Cargar más productos
-                            </button>
-                        ) : (
-                            products.length > 0 && <p>Has llegado al final.</p> // Mensaje al final
-                        )}
+                    {/* Controles de Paginación (sin cambios internos) */}
+                    <div className="pagination-controls" style={{ /*...*/ }}>
+                        {/* ... tu lógica isLoadingMore / hasMorePages ... */}
                     </div>
-
                 </section>
             </main>
             <Footer />

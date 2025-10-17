@@ -1228,6 +1228,43 @@ h2 {
     /* Columna derecha */
   }
 }
+/* --- Estilos para Formulario de Búsqueda en Header --- */
+.search-form {
+  display: flex;
+  align-items: center;
+  background-color: #f0f0f0; /* Fondo gris claro */
+  border-radius: 50px; /* Bordes redondeados */
+  padding: 5px 5px 5px 15px; /* Espaciado interno */
+  flex-grow: 0.5; /* Permite que crezca un poco */
+  max-width: 400px; /* Ancho máximo */
+}
+
+.search-input {
+  border: none;
+  background: transparent; /* Sin fondo */
+  outline: none; /* Sin borde al hacer foco */
+  flex-grow: 1; /* Ocupa el espacio disponible */
+  font-size: 0.9rem;
+  padding-right: 10px; /* Espacio antes del botón */
+}
+
+.search-button {
+  background-color: var(--color-blue); /* Fondo azul */
+  border: none;
+  border-radius: 50%; /* Botón circular */
+  color: white;
+  width: 30px; /* Tamaño del círculo */
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.search-button:hover {
+  background-color: #89c5dd; /* Azul más claro al pasar el mouse */
+}
 
 /* --- 5. ANIMACIONES --- */
 @keyframes moveGradient {
@@ -1264,6 +1301,16 @@ h2 {
     justify-content: center;
     text-align: center;
   }
+    .search-form {
+    order: 3; /* Poner la búsqueda debajo en móvil */
+    width: 90%; /* Más ancho en móvil */
+    max-width: none;
+    margin: 10px auto 0; /* Centrar y añadir espacio arriba */
+    flex-grow: 0; /* No permitir que crezca */
+  }
+   .main-header {
+      padding-bottom: 1.5rem; /* Más espacio abajo en header móvil */
+   }
 }
 
 @media (min-width: 992px) {

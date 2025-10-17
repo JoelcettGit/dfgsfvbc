@@ -132,7 +132,7 @@ function ProductFormView({ product, onBack, onSave }) {
     const [simpleImageFile, setSimpleImageFile] = useState(null);
     const [currentImageUrl, setCurrentImageUrl] = useState(product?.image_url || '');
 
-    // ESTA ES LA SECCIÓN DE ESTADOS QUE PROBABLEMENTE FALTABA
+    // ESTA ES LA SECCIÓN DE ESTADOS QUE PROBABLEMENTE FALTABA O ESTABA INCOMPLETA
     const [variants, setVariants] = useState(product?.product_variants || []);
     const [newVariantColorName, setNewVariantColorName] = useState('');
     const [newVariantColorHex, setNewVariantColorHex] = useState('#CCCCCC');
@@ -152,7 +152,7 @@ function ProductFormView({ product, onBack, onSave }) {
                 const fileName = `${Date.now()}-${simpleImageFile.name.replace(/\s/g, '_')}`;
                 const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, simpleImageFile);
                 if (uploadError) throw uploadError;
-                const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+                const { data: { publicUrl } } = await supabase.storage.from('product-images').getPublicUrl(fileName);
                 imageUrl = publicUrl;
             }
 
@@ -197,7 +197,7 @@ function ProductFormView({ product, onBack, onSave }) {
             const fileName = `${Date.now()}-VAR-${newVariantImageFile.name.replace(/\s/g, '_')}`;
             const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, newVariantImageFile);
             if (uploadError) { alert("Error al subir imagen de variante: " + uploadError.message); return; }
-            const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+            const { data: { publicUrl } } = await supabase.storage.from('product-images').getPublicUrl(fileName);
             variantImageUrl = publicUrl;
         }
 
@@ -299,7 +299,7 @@ function ProductFormView({ product, onBack, onSave }) {
                             <div className="color-picker-wrapper">
                                 <label>Color Hex</label>
                                 <div className="color-swatch" onClick={() => setDisplayColorPicker(!displayColorPicker)}><div className="color-preview" style={{ background: newVariantColorHex }} /></div>
-                                {displayColorPicker ? (<div className="color-popover"><div className="color-cover" onClick={() => setDisplayColorPicker(false)} /><SketchPicker color={newVariantColorHex} onChange={(color) => setNewColorHex(color.hex)} /></div>) : null}
+                                {displayColorPicker ? (<div className="color-popover"><div className="color-cover" onClick={() => setDisplayColorPicker(false)} /><SketchPicker color={newVariantColorHex} onChange={(color) => setNewVariantColorHex(color.hex)} /></div>) : null}
                             </div>
                             <input type="text" placeholder="Talle" value={newVariantSize} onChange={e => setNewVariantSize(e.target.value)} />
                             <input type="number" placeholder="Stock" value={newVariantStock} onChange={e => setNewVariantStock(e.target.value)} required/>
@@ -346,7 +346,7 @@ function EditVariantModal({ variant, onClose, onSave }) {
                 const fileName = `${Date.now()}-VAR-${imageFile.name.replace(/\s/g, '_')}`;
                 const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, imageFile);
                 if (uploadError) throw uploadError;
-                const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+                const { data: { publicUrl } } = await supabase.storage.from('product-images').getPublicUrl(fileName);
                 finalImageUrl = publicUrl;
             }
 

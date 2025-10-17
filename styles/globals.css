@@ -819,7 +819,91 @@ h2 {
   bottom: 0px;
   left: 0px;
 }
+/* --- Estilos para el Panel de Pedidos --- */
 
+/* Navegación del Admin */
+.admin-nav {
+  display: flex;
+  gap: 0.5rem;
+  background-color: #555;
+  border-radius: 50px;
+  padding: 5px;
+}
+.admin-nav button {
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+.admin-nav button:hover {
+  background-color: #666;
+}
+.admin-nav button.active {
+  background-color: var(--color-pink);
+  color: var(--color-dark-text);
+}
+
+/* Tabla de Pedidos */
+.orders-table .order-id {
+  font-family: monospace;
+  font-size: 0.9rem;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.orders-table .order-total {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+.order-items-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.order-item-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+.order-item-detail em {
+  font-size: 0.85rem;
+  color: #555;
+  font-style: italic;
+}
+.table-product-image-small {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #eee;
+}
+
+/* Insignia de Estado */
+.status-badge {
+  padding: 5px 10px;
+  border-radius: 50px;
+  font-weight: bold;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+}
+.status-badge.status-pendiente {
+  background-color: #f8e4a0; /* Amarillo */
+  color: #665;
+}
+.status-badge.status-completado {
+  background-color: #a9e8b9; /* Verde */
+  color: #365;
+}
+.status-badge.status-cancelado {
+  background-color: #f4c2c2; /* Rojo */
+  color: #633;
+}
 /* --- 5. ANIMACIONES --- */
 @keyframes moveGradient {
   0% { background-position: 0% 50%; }

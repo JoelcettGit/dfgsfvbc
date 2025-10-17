@@ -143,6 +143,7 @@ export default function CartPage() {
                                 
                                 {/* --- 6. Botón actualizado --- */}
                                 <button
+                                    targert="_blank"
                                     onClick={handleFinishOrder}
                                     className="btn-primary whatsapp-button"
                                     disabled={isProcessing} // Se deshabilita mientras procesa

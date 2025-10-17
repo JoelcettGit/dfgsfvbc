@@ -149,14 +149,10 @@ export default function AdminDashboard() {
 // --- NUEVO COMPONENTE: VISTA DE LISTA DE PEDIDOS ---
 function OrderListView({ orders }) {
     
-    // Función helper para obtener el nombre del item
+    // Helper para obtener el nombre (sin cambios)
     const getOrderItemName = (item) => {
-        if (item.products) {
-            // Es un producto simple
-            return item.products.name;
-        }
+        if (item.products) return item.products.name;
         if (item.product_variants) {
-            // Es una variante
             const productName = item.product_variants.products.name;
             const color = item.product_variants.color_name || '';
             const size = item.product_variants.size || '';
@@ -165,11 +161,34 @@ function OrderListView({ orders }) {
         return 'Producto desconocido';
     };
 
-    // Función helper para obtener la imagen del item
+    // Helper para obtener la imagen (sin cambios)
     const getOrderItemImage = (item) => {
         if (item.products) return item.products.image_url;
         if (item.product_variants) return item.product_variants.variant_image_url;
         return '/logo-vidaanimada.png';
+    };
+
+    // --- ¡NUEVO! ---
+    // Función para manejar el cambio de estado
+    const handleStatusChange = async (orderId, newStatus) => {
+        // Confirmación optimista (el estado cambia en la UI primero)
+        // (Aquí podríamos actualizar el estado local 'orders' para una UI más rápida)
+        
+        try {
+            const { error } = await supabase
+                .from('orders')
+                .update({ status: newStatus }) // Actualizamos el campo 'status'
+                .eq('id', orderId); // Donde el ID coincida
+
+            if (error) throw error;
+            
+            alert(`Pedido ${orderId.split('-')[0]}... actualizado a "${newStatus}".`);
+            // Para una UI 100% precisa, deberíamos recargar los pedidos con fetchOrders()
+            // pero por ahora, un refresco de página es suficiente si el admin lo necesita.
+
+        } catch (error) {
+            alert("Error al actualizar el estado: " + error.message);
+        }
     };
 
     return (
@@ -203,9 +222,19 @@ function OrderListView({ orders }) {
                                     ))}
                                 </td>
                                 <td className="order-total">${order.total_price}</td>
+                                
+                                {/* --- ¡ACTUALIZADO! --- */}
+                                {/* Reemplazamos el <span> por un <select> */}
                                 <td>
-                                    <span className={`status-badge status-${order.status}`}>{order.status}</span>
-                                    {/* Aquí podríamos añadir un <select> para cambiar el estado */}
+                                    <select
+                                        className={`status-select status-${order.status}`}
+                                        defaultValue={order.status}
+                                        onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                                    >
+                                        <option value="pendiente">Pendiente</option>
+                                        <option value="completado">Completado</option>
+                                        <option value="cancelado">Cancelado</option>
+                                    </select>
                                 </td>
                             </tr>
                         ))}

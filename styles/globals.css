@@ -904,6 +904,36 @@ h2 {
   background-color: #f4c2c2; /* Rojo */
   color: #633;
 }
+/* --- Estilos para el Select de Estado de Pedido --- */
+.status-select {
+  padding: 8px 12px;
+  border-radius: 50px;
+  font-weight: bold;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+  border: 2px solid;
+  cursor: pointer;
+}
+.status-select:focus {
+  outline: none;
+  box-shadow: 0 0 5px var(--color-pink);
+}
+
+.status-select.status-pendiente {
+  background-color: #f8e4a0;
+  border-color: #e0ca82;
+  color: #665;
+}
+.status-select.status-completado {
+  background-color: #a9e8b9;
+  border-color: #82e099;
+  color: #365;
+}
+.status-select.status-cancelado {
+  background-color: #f4c2c2;
+  border-color: #e0a0a0;
+  color: #633;
+}
 /* --- 5. ANIMACIONES --- */
 @keyframes moveGradient {
   0% { background-position: 0% 50%; }

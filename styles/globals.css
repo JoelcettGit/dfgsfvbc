@@ -977,6 +977,96 @@ h2 {
   background-color: #f5f5f5;
   cursor: not-allowed;
 }
+/* --- Estilos Personalizados para React Responsive Carousel --- */
+
+/* Contenedor Principal del Carousel en la Página de Producto */
+.product-carousel .carousel-slider {
+  border-radius: 15px; /* Mantiene el borde redondeado */
+  overflow: hidden;
+}
+
+/* Flechas de Navegación */
+.product-carousel .control-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10; /* Asegura que estén por encima */
+  opacity: 0.7; /* Ligeramente transparentes */
+  background-color: rgba(0, 0, 0, 0.4); /* Fondo semi-transparente */
+  border-radius: 50%; /* Círculo */
+  width: 40px; /* Tamaño del círculo */
+  height: 40px;
+  padding: 0; /* Quitar padding interno */
+  transition: opacity 0.3s ease, background-color 0.3s ease;
+}
+
+.product-carousel .control-arrow:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* Ajustar posición específica izquierda/derecha */
+.product-carousel .control-arrow.control-prev {
+  left: 15px; /* Espacio desde el borde izquierdo */
+}
+.product-carousel .control-arrow.control-next {
+  right: 15px; /* Espacio desde el borde derecho */
+}
+
+/* Estilo del icono de la flecha (pseudo-elemento ::before) */
+.product-carousel .control-arrow::before {
+  border-top-width: 10px; /* Grosor de la flecha */
+  border-bottom-width: 10px;
+  margin: 0; /* Centrar la flecha */
+  position: absolute; /* Posicionamiento absoluto dentro del círculo */
+  top: 50%;
+  left: 50%;
+}
+.product-carousel .control-arrow.control-prev::before {
+  border-right-width: 12px; /* Largo de la flecha */
+  transform: translate(-30%, -50%); /* Ajuste fino para centrar */
+}
+.product-carousel .control-arrow.control-next::before {
+  border-left-width: 12px; /* Largo de la flecha */
+  transform: translate(-70%, -50%); /* Ajuste fino para centrar */
+}
+
+
+/* --- Ocultar Flechas Deshabilitadas --- */
+/* (La librería añade esta clase cuando infiniteLoop es false y estás en los extremos) */
+.product-carousel .control-arrow.control-disabled {
+  display: none; /* Oculta completamente la flecha */
+}
+
+
+/* Miniaturas (Thumbs) */
+.product-carousel .thumbs-wrapper {
+  margin-top: 10px; /* Espacio entre slider y thumbs */
+  overflow: hidden; /* Evita desbordamiento si hay muchas thumbs */
+}
+
+.product-carousel .thumb {
+  border: 2px solid transparent; /* Borde inicial */
+  border-radius: 8px; /* Bordes redondeados */
+  padding: 3px; /* Espacio interno */
+  height: 60px; /* Altura fija para las miniaturas */
+  width: 60px !important; /* Ancho fijo (importante para sobreescribir) */
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+}
+.product-carousel .thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Asegura que la imagen cubra el espacio */
+  border-radius: 6px; /* Borde interno redondeado */
+}
+
+.product-carousel .thumb.selected,
+.product-carousel .thumb:hover {
+  border-color: var(--color-pink); /* Borde rosa al seleccionar/hover */
+}
+
 /* --- 5. ANIMACIONES --- */
 @keyframes moveGradient {
   0% { background-position: 0% 50%; }

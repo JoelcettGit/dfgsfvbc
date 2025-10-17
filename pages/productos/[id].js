@@ -236,24 +236,23 @@ export default function ProductPage({ product, recommendedProducts }) {
                         {/* --- SECCIÓN DE IMAGEN CON CAROUSEL --- */}
                         <div className="product-image-section">
                             <Carousel
-                                showArrows={sliderImages.length > 1} // Muestra flechas solo si hay más de 1 imagen
-                                showThumbs={sliderImages.length > 1} // Muestra miniaturas solo si hay más de 1 imagen
+                                showArrows={sliderImages.length > 1} // Muestra flechas solo si hay > 1 imagen
+                                showThumbs={sliderImages.length > 1} // Muestra thumbs solo si hay > 1 imagen
                                 showStatus={false}
-                                infiniteLoop={sliderImages.length > 1} // Loop solo si hay más de 1 imagen
+                                infiniteLoop={sliderImages.length > 1} // Loop solo si hay > 1 imagen
                                 useKeyboardArrows={true}
                                 className="product-carousel"
-                                // Asegura que el carrusel se actualice cuando cambian las selecciones del bundle
-                                selectedItem={0} // Reinicia al primer slide si las imágenes cambian (puede necesitar ajuste)
-                                key={JSON.stringify(selectedBundleVariants)} // Forza re-render del carrusel al cambiar selecciones
+                                // selectedItem={0} // Quitamos esto también, dejamos que el componente maneje su estado interno
+                                // key={JSON.stringify(selectedBundleVariants)} // <-- ¡LÍNEA ELIMINADA!
                             >
                                 {sliderImages.map((image, index) => (
-                                    <div key={index} style={{ borderRadius: '15px', overflow: 'hidden' }}> {/* Aplicar borde aquí */}
+                                    <div key={index} style={{ borderRadius: '15px', overflow: 'hidden' }}>
                                         <Image
                                             src={image.url}
                                             alt={image.alt}
                                             width={500}
                                             height={500}
-                                            style={{ objectFit: 'cover', display: 'block' }} // display block es importante
+                                            style={{ objectFit: 'cover', display: 'block' }}
                                             priority={index === 0}
                                         />
                                     </div>

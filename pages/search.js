@@ -67,35 +67,32 @@ export default function SearchPage({ products, searchTerm }) {
 
 // --- getServerSideProps (Se ejecuta en cada petición) ---
 export async function getServerSideProps(context) {
-    const searchTerm = context.query.q || ''; // Obtiene el término de búsqueda de la URL (?q=...)
+    const searchTerm = context.query.q || '';
 
     if (!searchTerm) {
-        // Si no hay término de búsqueda, devuelve props vacíos o redirige
         return { props: { products: [], searchTerm: '' } };
     }
 
-    // Prepara el término para búsqueda 'ilike' (case-insensitive, partial match)
     const searchQuery = `%${searchTerm}%`;
 
-    // Consulta a Supabase buscando en 'name' O 'description'
+    // --- QUERY MODIFIED HERE ---
     const { data: products, error } = await supabase
         .from('products')
         .select(`
-            id, name, base_price, product_type, image_url, tag,
+            id, name, base_price, product_type, image_url, tag, category, /* Ensure category is selected */
             product_variants (variant_image_url),
             bundle_links (product_variants (variant_image_url))
         `)
-        // Busca si el nombre O la descripción contienen el término
-        .or(`name.ilike.${searchQuery},description.ilike.${searchQuery}`)
-        .limit(50); // Limita resultados para no sobrecargar
+        // Now checks name OR description OR category
+        .or(`name.ilike.${searchQuery},description.ilike.${searchQuery},category.ilike.${searchQuery}`)
+        .limit(50);
+    // -------------------------
 
     if (error) {
         console.error("Error fetching search results:", error.message);
-        // Podrías devolver una prop de error para mostrar un mensaje en la UI
         return { props: { products: [], searchTerm, error: error.message } };
     }
 
-    // Pasa los productos encontrados y el término de búsqueda como props a la página
     return {
         props: {
             products: products || [],

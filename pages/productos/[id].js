@@ -257,6 +257,18 @@ export default function ProductPage({ product, recommendedProducts }) {
                                 ))}
                             </div>
                         )}
+
+                        <div className="product-main-image">
+                            <Image
+                                src={mainImageUrl}
+                                alt={mainImageAlt}
+                                width={800} // Ajusta el ancho según la imagen más grande que tengas
+                                height={900} // Ajusta la altura (debe ser mayor que el thumbnail)
+                                priority={true} // Sugerido para la imagen principal
+                                style={{ objectFit: 'contain', width: '100%', height: 'auto' }}
+                            />
+                        </div>
+
                         {/* --- Sección de Información y Selectores --- */}
                         <div className="product-info-section">
                             <h1>{product.name}</h1>

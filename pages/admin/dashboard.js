@@ -8,12 +8,19 @@ import { SketchPicker } from 'react-color';
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 // --- FUNCIÓN DE REVALIDACIÓN AGREGADA ---
-async function revalidateStaticPages() {
+async function revalidateStaticPages(productId = null) {
     console.log("Iniciando revalidación...");
     try {
-        // Asegúrate de tener NEXT_PUBLIC_REVALIDATE_TOKEN en tus variables de Vercel
-        await fetch(`/api/revalidate?secret=${process.env.NEXT_PUBLIC_REVALIDATE_TOKEN}`);
-        console.log("Revalidación solicitada.");
+        // Construimos la URL de la API
+        const revalidateUrl = `/api/revalidate?secret=${process.env.NEXT_PUBLIC_REVALIDATE_TOKEN}`;
+
+        // Si nos pasaron un ID de producto, lo añadimos a la URL
+        const urlToCall = productId
+            ? `${revalidateUrl}&id=${productId}`
+            : revalidateUrl;
+
+        await fetch(urlToCall);
+        console.log("Revalidación solicitada para:", urlToCall);
     } catch (err) {
         console.error("Error al solicitar la revalidación:", err);
     }
@@ -62,7 +69,7 @@ export default function AdminDashboard() {
             alert("Error al eliminar el producto: " + error.message);
         } else {
             alert(`Producto "${productName}" eliminado.`);
-            await revalidateStaticPages(); // Función ahora definida
+            await revalidateStaticPages(productId); // <-- Pasar el ID aquí
             fetchProducts();
         }
     };
@@ -184,14 +191,14 @@ function ProductFormView({ product, onBack, onSave }) {
                 currentProductId = data.id;
                 alert("Producto creado.");
                 // Actualizamos el 'product' local para poder añadir variantes sin recargar
-                product = data; 
+                product = data;
             } else {
                 const { error } = await supabase.from('products').update(productData).eq('id', currentProductId);
                 if (error) throw error;
                 alert("Producto actualizado.");
             }
 
-            await revalidateStaticPages();
+            await revalidateStaticPages(currentProductId); // <-- Pasar el ID aquí
             onSave(); // Esto llama a fetchProducts() en el padre
 
         } catch (error) {
@@ -205,8 +212,8 @@ function ProductFormView({ product, onBack, onSave }) {
     const handleAddVariant = async (e) => {
         e.preventDefault();
         if (!product || !product.id) { // Verificamos que el producto exista
-             alert("Guarda primero los datos generales del producto."); 
-             return; 
+            alert("Guarda primero los datos generales del producto.");
+            return;
         }
 
         let variantImageUrl = null;
@@ -232,7 +239,7 @@ function ProductFormView({ product, onBack, onSave }) {
             setVariants([...variants, data]);
             setNewVariantColorName(''); setNewVariantColorHex('#CCCCCC'); setNewVariantSize(''); setNewVariantStock(0); setNewVariantImageFile(null);
             if (document.getElementById('newVariantImageFile')) document.getElementById('newVariantImageFile').value = '';
-            await revalidateStaticPages();
+            await revalidateStaticPages(product.id);
         }
     };
 
@@ -242,7 +249,7 @@ function ProductFormView({ product, onBack, onSave }) {
         if (error) { alert("Error al eliminar variante: " + error.message); }
         else {
             setVariants(variants.filter(v => v.id !== variantId));
-            await revalidateStaticPages();
+            await revalidateStaticPages(product.id);
         }
     };
 
@@ -251,10 +258,9 @@ function ProductFormView({ product, onBack, onSave }) {
     };
 
     const handleSaveVariantChanges = async (updatedVariant) => {
-        // La actualización de BD se hace en el modal
         setVariants(variants.map(v => v.id === updatedVariant.id ? updatedVariant : v));
         setManagingVariant(null);
-        await revalidateStaticPages(); // Revalidamos al guardar cambios
+        await revalidateStaticPages(product.id); // <-- Pasar product.id aquí
     };
 
     return (
@@ -349,7 +355,7 @@ function EditVariantModal({ variant, onClose, onSave }) {
     const [colorHex, setColorHex] = useState(variant.color_hex || '#CCCCCC');
     const [displayColorPicker, setDisplayColorPicker] = useState(false);
     const [size, setSize] = useState(variant.size || '');
-    const [stock, setStock] =useState(variant.stock || 0);
+    const [stock, setStock] = useState(variant.stock || 0);
     const [imageFile, setImageFile] = useState(null);
     const [currentImageUrl, setCurrentImageUrl] = useState(variant.variant_image_url || '');
     const [isSaving, setIsSaving] = useState(false);

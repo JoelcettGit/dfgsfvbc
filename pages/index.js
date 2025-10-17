@@ -88,10 +88,5 @@ export async function getStaticProps() {
   if (error) {
     console.error("Error fetching featured products:", error.message);
   }
-
-  // --- AÑADIR ESTE LOG ---
-  console.log("Featured Products Data:", JSON.stringify(products, null, 2));
-  // -----------------------
-
   return { props: { products: products || [] }, revalidate: 60 };
 }

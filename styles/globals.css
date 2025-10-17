@@ -977,26 +977,23 @@ h2 {
   background-color: #f5f5f5;
   cursor: not-allowed;
 }
-/* --- Estilos Personalizados para React Responsive Carousel --- */
+/* --- Estilos Personalizados para Flechas React Responsive Carousel --- */
 
-/* Contenedor Principal del Carousel en la Página de Producto */
-.product-carousel .carousel-slider {
-  border-radius: 15px; /* Mantiene el borde redondeado */
-  overflow: hidden;
-}
-
-/* Flechas de Navegación */
+/* Asegurar visibilidad y posicionamiento base */
 .product-carousel .control-arrow {
+  display: block; /* Asegura que no esté oculto por defecto */
+  visibility: visible; /* Asegura visibilidad */
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 10; /* Asegura que estén por encima */
-  opacity: 0.7; /* Ligeramente transparentes */
-  background-color: rgba(0, 0, 0, 0.4); /* Fondo semi-transparente */
-  border-radius: 50%; /* Círculo */
-  width: 40px; /* Tamaño del círculo */
+  z-index: 10;
+  opacity: 0.7;
+  background-color: rgba(0, 0, 0, 0.4);
+  border-radius: 50%;
+  width: 40px;
   height: 40px;
-  padding: 0; /* Quitar padding interno */
+  padding: 0;
+  cursor: pointer; /* Añadir cursor pointer */
   transition: opacity 0.3s ease, background-color 0.3s ease;
 }
 
@@ -1005,39 +1002,45 @@ h2 {
   background-color: rgba(0, 0, 0, 0.6);
 }
 
-/* Ajustar posición específica izquierda/derecha */
+/* Posición Izquierda/Derecha */
 .product-carousel .control-arrow.control-prev {
-  left: 15px; /* Espacio desde el borde izquierdo */
+  left: 15px;
 }
 .product-carousel .control-arrow.control-next {
-  right: 15px; /* Espacio desde el borde derecho */
+  right: 15px;
 }
 
-/* Estilo del icono de la flecha (pseudo-elemento ::before) */
+/* Estilo del icono de flecha (asegurar que se muestre) */
 .product-carousel .control-arrow::before {
-  border-top-width: 10px; /* Grosor de la flecha */
-  border-bottom-width: 10px;
-  margin: 0; /* Centrar la flecha */
-  position: absolute; /* Posicionamiento absoluto dentro del círculo */
+  content: ''; /* Asegurar que el pseudo-elemento exista */
+  display: block; /* Asegurar que se muestre */
+  border-style: solid;
+  border-color: white; /* Color de la flecha */
+  border-width: 0 3px 3px 0; /* Grosor y forma de la flecha */
+  width: 10px; /* Tamaño del icono */
+  height: 10px;
+  position: absolute;
   top: 50%;
   left: 50%;
 }
+
 .product-carousel .control-arrow.control-prev::before {
-  border-right-width: 12px; /* Largo de la flecha */
-  transform: translate(-30%, -50%); /* Ajuste fino para centrar */
+  border-width: 3px 0 0 3px; /* Cambiar dirección */
+  transform: translate(-50%, -50%) rotate(45deg); /* Centrar y rotar */
+   /* Ajuste fino si es necesario: transform: translate(-40%, -50%) rotate(45deg); */
 }
+
 .product-carousel .control-arrow.control-next::before {
-  border-left-width: 12px; /* Largo de la flecha */
-  transform: translate(-70%, -50%); /* Ajuste fino para centrar */
+   border-width: 3px 3px 0 0; /* Cambiar dirección */
+   transform: translate(-50%, -50%) rotate(45deg); /* Centrar y rotar */
+   /* Ajuste fino si es necesario: transform: translate(-60%, -50%) rotate(45deg); */
 }
 
 
-/* --- Ocultar Flechas Deshabilitadas --- */
-/* (La librería añade esta clase cuando infiniteLoop es false y estás en los extremos) */
+/* Ocultar flechas deshabilitadas (si infiniteLoop es false) */
 .product-carousel .control-arrow.control-disabled {
-  display: none; /* Oculta completamente la flecha */
+  display: none !important; /* Forzar ocultación */
 }
-
 
 /* Miniaturas (Thumbs) */
 .product-carousel .thumbs-wrapper {

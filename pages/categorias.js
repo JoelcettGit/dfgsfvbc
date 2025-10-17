@@ -117,9 +117,5 @@ export async function getStaticProps() {
         return { props: { allProducts: [] }, revalidate: 60 };
     }
 
-    // --- AÑADIR ESTE LOG ---
-    console.log("All Products Data:", JSON.stringify(allProducts, null, 2));
-    // -----------------------
-
     return { props: { allProducts: allProducts || [] }, revalidate: 60 };
 }

@@ -73,10 +73,15 @@ export async function getServerSideProps(context) {
         return { props: { products: [], searchTerm: '' } };
     }
 
-    // No necesitamos formatear el ftsQuery manualmente para textSearch
     const query = searchTerm.trim();
 
+    // --- IMPORTANTE: Definir la expresión del tsvector EXACTAMENTE como en el índice ---
+    // Esta cadena debe coincidir con la usada en CREATE INDEX
+    const ftsVectorExpression = `to_tsvector('spanish', coalesce(name, '') || ' ' || coalesce(description, '') || ' ' || coalesce(category, ''))`;
+
     try {
+        console.log(`Ejecutando textSearch con query: "${query}" sobre: ${ftsVectorExpression}`); // Log para depurar
+
         const { data: products, error } = await supabase
             .from('products')
             .select(`
@@ -84,20 +89,28 @@ export async function getServerSideProps(context) {
                 product_variants (variant_image_url),
                 bundle_links (product_variants (variant_image_url))
             `)
-            // --- CAMBIO AQUÍ: Usamos textSearch ---
+            // --- Usamos textSearch con la expresión correcta ---
             .textSearch(
-                `to_tsvector('spanish', coalesce(name, '') || ' ' || coalesce(description, '') || ' ' || coalesce(category, ''))`,
-                query,
-                {
-                    config: 'spanish',
-                    type: 'websearch'
-                }
+                 ftsVectorExpression, // Pasamos la variable con la expresión exacta
+                 query,
+                 {
+                     config: 'spanish',
+                     // Probamos con 'plain' primero, que es más simple (AND entre términos)
+                     // Si 'plain' no funciona bien para frases, volvemos a 'websearch'
+                     type: 'plain', 
+                     // Opcional: Probar con 'prefix: true' si 'plain' solo busca palabras completas
+                     // plain: true // Esto haría que busque prefijos con el tipo 'plain'
+                 }
             )
             .limit(50);
 
         if (error) {
-            throw error;
+            // Si hay error, loguearlo detalladamente
+            console.error("Error detallado de Supabase textSearch:", error);
+            throw new Error(error.message); // Lanza para que el catch lo maneje
         }
+
+        console.log(`Resultados encontrados para "${query}": ${products?.length || 0}`); // Log de resultados
 
         return {
             props: {
@@ -107,7 +120,9 @@ export async function getServerSideProps(context) {
         };
 
     } catch (error) {
-        console.error("Error fetching search results (textSearch):", error.message);
-        return { props: { products: [], searchTerm, error: "Error al realizar la búsqueda." } };
+         // Loguea el error formateado
+         console.error("Error en getServerSideProps (search.js):", error.message);
+         // Devuelve el error a la página para posible feedback al usuario
+         return { props: { products: [], searchTerm, error: `Error al buscar: ${error.message}` } };
     }
 }

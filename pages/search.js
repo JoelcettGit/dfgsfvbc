@@ -65,27 +65,16 @@ export default function SearchPage({ products, searchTerm }) {
     );
 }
 
+// --- getServerSideProps (ACTUALIZADO con .textSearch()) ---
 export async function getServerSideProps(context) {
     const searchTerm = context.query.q || '';
 
-    if (!searchTerm.trim()) { // Verifica si el término está vacío después de quitar espacios
+    if (!searchTerm.trim()) {
         return { props: { products: [], searchTerm: '' } };
     }
 
-    // Prepara el término de búsqueda para FTS en español con coincidencia de prefijo.
-    // Ej: "pantu cer" se convierte en "pantu:* & cer:*"
-    // Esto busca palabras que empiecen con "pantu" Y palabras que empiecen con "cer".
-    const ftsQuery = searchTerm.trim()
-        .split(' ') // Separa por espacios
-        .filter(Boolean) // Elimina espacios extra
-        .map(term => term + ':*') // Añade ':*' para coincidencia de prefijo
-        .join(' & '); // Une con ' & ' para requerir todas las palabras
-
-    // Si ftsQuery queda vacío después de procesar (ej: solo espacios), no busca.
-    if (!ftsQuery) {
-         return { props: { products: [], searchTerm } };
-    }
-
+    // No necesitamos formatear el ftsQuery manualmente para textSearch
+    const query = searchTerm.trim();
 
     try {
         const { data: products, error } = await supabase
@@ -95,30 +84,22 @@ export async function getServerSideProps(context) {
                 product_variants (variant_image_url),
                 bundle_links (product_variants (variant_image_url))
             `)
-            // --- NUEVO FILTRO FTS ---
-            // Busca en el tsvector combinado (usando el índice si lo creaste)
-            .filter(
-                // Nombre de la columna virtual o expresión tsvector
-                // IMPORTANTE: Asegúrate que esta expresión coincida EXACTAMENTE con la del índice
-                'fts_vector_column', // Asume que creaste una columna o usa la expresión directa:
-                // `to_tsvector('spanish', coalesce(name, '') || ' ' || coalesce(description, '') || ' ' || coalesce(category, ''))`, 
-                '@@', // Operador FTS: "matches"
-                // `to_tsquery('spanish', ftsQuery)` // Convierte el string de búsqueda a tipo tsquery
-                 `(${to_tsvector('spanish', coalesce(name, '') || ' ' || coalesce(description, '') || ' ' || coalesce(category, ''))}) @@ (to_tsquery('spanish', '${ftsQuery}'))` // Forma directa si no hay columna fts_vector_column
+            // --- CAMBIO AQUÍ: Usamos textSearch ---
+            .textSearch(
+                 // Expresión EXACTA usada en el índice GIN
+                `to_tsvector('spanish', coalesce(name, '') || ' ' || coalesce(description, '') || ' ' || coalesce(category, ''))`, // Placeholder - ver nota abajo
+                 query, // Pasamos el término de búsqueda original y limpio
+                 {
+                     config: 'spanish',   // Diccionario de idioma
+                     type: 'websearch' // Tipo optimizado para búsquedas web (maneja "and", "or", etc.)
+                     // Opcional: Probar 'plain' o 'phrase' si 'websearch' no da los resultados esperados
+                     // type: 'plain'
+                 }
             )
-            // Filtro FTS usando la función textSearch (alternativa más simple si la anterior falla)
-            // .textSearch(
-            //     'fts_vector_column', // O la expresión directa como string
-            //     searchTerm.trim(), // Pasa el término original
-            //     {
-            //         config: 'spanish', // Diccionario
-            //         type: 'websearch' // Tipo de query que maneja mejor input de usuario
-            //     }
-            // )
             .limit(50);
 
         if (error) {
-            throw error; // Lanza el error para el bloque catch
+            throw error;
         }
 
         return {
@@ -129,8 +110,7 @@ export async function getServerSideProps(context) {
         };
 
     } catch (error) {
-         console.error("Error fetching search results (FTS):", error.message);
-         // Devuelve un error para que el usuario sepa que algo falló
+         console.error("Error fetching search results (textSearch):", error.message);
          return { props: { products: [], searchTerm, error: "Error al realizar la búsqueda." } };
     }
 }

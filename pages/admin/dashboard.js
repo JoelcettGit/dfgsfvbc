@@ -487,8 +487,98 @@ function ProductFormView({ product, onBack, onSave, allProducts }) {
 
 
 // --- MODAL Y VISTA DE PEDIDOS (TUS COMPONENTES SIN CAMBIOS) ---
-// ... (Pega aquí tus componentes OrderListView y EditVariantModal completos) ...
+function OrderListView({ orders }) {
+    
+    // Helper para obtener el nombre 
+    const getOrderItemName = (item) => {
+        if (item.products) return item.products.name;
+        if (item.product_variants) {
+            const productName = item.product_variants.products.name;
+            const color = item.product_variants.color_name || '';
+            const size = item.product_variants.size || '';
+            return `${productName} (${color} - ${size})`;
+        }
+        return 'Producto desconocido';
+    };
 
+    // Helper para obtener la imagen
+    const getOrderItemImage = (item) => {
+        if (item.products) return item.products.image_url;
+        if (item.product_variants) return item.product_variants.variant_image_url;
+        return '/logo-vidaanimada.png';
+    };
+
+    // Función para manejar el cambio de estado
+    const handleStatusChange = async (orderId, newStatus) => {
+        try {
+            const { error } = await supabase
+                .from('orders')
+                .update({ status: newStatus })
+                .eq('id', orderId);
+
+            if (error) throw error;
+            
+            alert(`Pedido ${orderId.split('-')[0]}... actualizado a "${newStatus}".`);
+            // Idealmente, aquí recargaríamos los pedidos con fetchOrders()
+            // Pero por simplicidad, podemos dejar que el admin refresque si es necesario
+            // o implementar una recarga más adelante.
+
+        } catch (error) {
+            alert("Error al actualizar el estado: " + error.message);
+        }
+    };
+
+    return (
+        <div className="admin-section">
+            <h2>Listado de Pedidos ({orders.length})</h2>
+            <div className="table-container">
+                <table className="products-table orders-table">
+                    <thead>
+                        <tr>
+                            <th>ID Pedido</th>
+                            <th>Fecha</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {orders.map(order => (
+                            <tr key={order.id}>
+                                <td title={order.id} className="order-id">{order.id.split('-')[0]}...</td>
+                                <td>{new Date(order.created_at).toLocaleString('es-AR')}</td>
+                                <td className="order-items-cell">
+                                    {order.order_items.map(item => (
+                                        <div key={item.id || Math.random()} className="order-item-detail">
+                                            {/* Corregido: Usar getOrderItemImage */}
+                                            <Image src={getOrderItemImage(item) || '/logo-vidaanimada.png'} alt="" width={40} height={40} className="table-product-image-small" />
+                                            <span>
+                                                {item.quantity} x {getOrderItemName(item)}
+                                                <em> (Sub: ${(item.unit_price * item.quantity).toFixed(2)})</em> {/* <-- Asegurar toFixed(2) */}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </td>
+                                <td className="order-total">${parseFloat(order.total_price).toFixed(2)}</td> {/* <-- Asegurar toFixed(2) */}
+                                <td>
+                                    <select
+                                        className={`status-select status-${order.status}`}
+                                        defaultValue={order.status}
+                                        onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                                    >
+                                        <option value="pendiente">Pendiente</option>
+                                        <option value="completado">Completado</option>
+                                        <option value="cancelado">Cancelado</option>
+                                    </select>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
 // --- MODAL DE EDICIÓN DE VARIANTE (SIN CAMBIOS) ---
 function EditVariantModal({ variant, onClose, onSave }) {
     // ... (Todo tu componente EditVariantModal, sin cambios) ...

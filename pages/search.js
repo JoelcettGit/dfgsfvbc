@@ -27,7 +27,7 @@ export default function SearchPage({ products, searchTerm }) {
     return (
         <>
             <Head>
-                <title>Resultados para &quot;{searchTerm}&quot; - Vida Animada</title>
+                <title>Resultados para &quot;{searchTerm}&quot; | Vida Animada</title>
                 <link rel="icon" href="/logo-vidaanimada.png" />
             </Head>
             <Header />

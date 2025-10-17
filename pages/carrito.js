@@ -97,7 +97,7 @@ export default function CartPage() {
 
     return (
         <>
-            <Head><title>Carrito de Compras - Vida Animada</title></Head>
+            <Head><title>Carrito de Compras | Vida Animada</title></Head>
             <Header />
             <main>
                 <section className="page-section">

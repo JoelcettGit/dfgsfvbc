@@ -121,7 +121,7 @@ export default function CategoriasPage({ initialProducts, totalProducts, error: 
     return (
         <>
             <Head>
-                <title>Productos - Vida Animada</title>
+                <title>Productos | Vida Animada</title>
                 <link rel="icon" href="/logo-vidaanimada.png" />
             </Head>
             <Header />

@@ -198,7 +198,7 @@ export default function ProductPage({ product, recommendedProducts }) {
     return (
         <>
             <Head>
-                <title>{product.name} - Vida Animada</title>
+                <title>{product.name} | Vida Animada</title>
                 <link rel="icon" href="/logo-vidaanimada.png" />
             </Head>
             <Header />

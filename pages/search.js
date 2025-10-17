@@ -39,7 +39,7 @@ export default function SearchPage({ products, searchTerm }) {
                         <div className="product-grid" style={{ marginTop: '2rem' }}>
                             {products.map((product) => (
                                 <Link href={`/productos/${product.id}`} key={product.id} passHref>
-                                     <div className="product-card" style={{ cursor: 'pointer' }}>
+                                    <div className="product-card" style={{ cursor: 'pointer' }}>
                                         {product.tag && <span className="product-tag">{product.tag}</span>}
                                         <Image
                                             src={getProductImage(product)}
@@ -49,7 +49,7 @@ export default function SearchPage({ products, searchTerm }) {
                                         />
                                         <h4>{product.name}</h4>
                                         <p className="price">Desde ${product.base_price}</p>
-                                     </div>
+                                    </div>
                                 </Link>
                             ))}
                         </div>
@@ -86,15 +86,12 @@ export async function getServerSideProps(context) {
             `)
             // --- CAMBIO AQUÍ: Usamos textSearch ---
             .textSearch(
-                 // Expresión EXACTA usada en el índice GIN
-                `to_tsvector('spanish', coalesce(name, '') || ' ' || coalesce(description, '') || ' ' || coalesce(category, ''))`, // Placeholder - ver nota abajo
-                 query, // Pasamos el término de búsqueda original y limpio
-                 {
-                     config: 'spanish',   // Diccionario de idioma
-                     type: 'websearch' // Tipo optimizado para búsquedas web (maneja "and", "or", etc.)
-                     // Opcional: Probar 'plain' o 'phrase' si 'websearch' no da los resultados esperados
-                     // type: 'plain'
-                 }
+                `to_tsvector('spanish', coalesce(name, '') || ' ' || coalesce(description, '') || ' ' || coalesce(category, ''))`,
+                query,
+                {
+                    config: 'spanish',
+                    type: 'websearch'
+                }
             )
             .limit(50);
 
@@ -110,7 +107,7 @@ export async function getServerSideProps(context) {
         };
 
     } catch (error) {
-         console.error("Error fetching search results (textSearch):", error.message);
-         return { props: { products: [], searchTerm, error: "Error al realizar la búsqueda." } };
+        console.error("Error fetching search results (textSearch):", error.message);
+        return { props: { products: [], searchTerm, error: "Error al realizar la búsqueda." } };
     }
 }

@@ -7,66 +7,70 @@ import { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
+// Constante para paginación
 const PRODUCTS_PER_PAGE = 12;
-// Supabase client initialization (outside component)
+
+// Cliente Supabase (solo para fetchCategories en el cliente)
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
 export default function CategoriasPage({ initialProducts, totalProducts, error: initialError }) {
     const [selectedCategory, setSelectedCategory] = useState('todos');
-    const [uniqueCategories, setUniqueCategories] = useState([]);
+    const [uniqueCategories, setUniqueCategories] = useState(['todos']); // Inicia con 'todos'
     const [products, setProducts] = useState(initialProducts || []);
     const [currentPage, setCurrentPage] = useState(1);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [hasMorePages, setHasMorePages] = useState((initialProducts?.length || 0) < totalProducts);
     const [currentTotal, setCurrentTotal] = useState(totalProducts);
-
-    // --- NUEVO ESTADO PARA ORDENACIÓN ---
     const [sortBy, setSortBy] = useState('default');
-    // Efecto para obtener categorías únicas (solo se ejecuta una vez al inicio)
+
+    // Efecto para obtener categorías únicas al montar
     useEffect(() => {
         const fetchCategories = async () => {
-            // Podríamos hacer una query distinct a Supabase, pero si ya tenemos todos los productos
-            // en algún punto (o podemos traerlos rápido), esto funciona.
-            // O MEJOR: hacer una query específica para categorías distintas.
             try {
-                // Query para obtener categorías distintas directamente
-                const supabaseClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-                const { data: categoriesData, error } = await supabaseClient
+                // Query optimizada para obtener solo categorías distintas y no nulas
+                const { data: categoriesData, error } = await supabase
                     .from('products')
                     .select('category')
+                    .neq('category', null) // No traer productos sin categoría
+                    .neq('category', '');   // No traer productos con categoría vacía
 
                 if (error) throw error;
 
-                const categories = ['todos', ...new Set(categoriesData.map(p => p.category).filter(Boolean))];
+                // Crear lista única y añadir 'todos' al principio
+                const categories = ['todos', ...new Set(categoriesData.map(p => p.category))];
                 setUniqueCategories(categories);
 
             } catch (err) {
-                console.error("Error fetching distinct categories:", err);
-                setUniqueCategories(['todos']); // Fallback
+                 console.error("Error fetching distinct categories:", err.message);
+                 // Mantener solo 'todos' si falla
+                 setUniqueCategories(['todos']);
             }
         };
         fetchCategories();
-    }, []); // Array vacío para que corra solo al montar
+    }, []); // Array vacío, corre solo una vez
 
-    // --- FUNCIÓN GENÉRICA PARA CARGAR PRODUCTOS (Refactorizada) ---
+    // Función genérica para cargar productos desde la API
     const fetchProductsPage = async (page = 1, category = selectedCategory, sort = sortBy) => {
-        setIsLoadingMore(true); // Siempre mostrar carga al iniciar fetch
-        setHasMorePages(false); // Asumir que no hay más hasta confirmar
+        setIsLoadingMore(true);
+        setHasMorePages(false);
 
         try {
             const response = await fetch(`/api/products?page=${page}&category=${category}&sort=${sort}`);
-            if (!response.ok) throw new Error('Error al cargar productos desde API');
+            if (!response.ok) {
+                 const errorData = await response.json(); // Intenta leer el error de la API
+                 throw new Error(errorData.message || 'Error al cargar productos desde API');
+            }
             const data = await response.json();
 
-            // Si es la página 1, reemplaza los productos; si no, añade
             setProducts(page === 1 ? data.products : prev => [...prev, ...data.products]);
             setCurrentPage(page);
             setHasMorePages(data.hasNextPage);
             setCurrentTotal(data.totalProducts);
 
         } catch (error) {
-            console.error("Error en fetchProductsPage:", error);
-            // Considera mostrar un mensaje de error al usuario
-            if (page === 1) { // Si falla la carga inicial/filtro, muestra fallback
+            console.error("Error en fetchProductsPage:", error.message);
+            // Mostrar error al usuario sería ideal aquí
+            if (page === 1) { // Fallback si falla carga inicial/filtro
                 setProducts(initialProducts || []);
                 setHasMorePages((initialProducts?.length || 0) < totalProducts);
                 setCurrentTotal(totalProducts);
@@ -76,39 +80,59 @@ export default function CategoriasPage({ initialProducts, totalProducts, error: 
         }
     };
 
-    // --- FUNCIÓN PARA CARGAR MÁS ---
+    // Cargar más productos
     const loadMoreProducts = () => {
         if (!isLoadingMore && hasMorePages) {
             fetchProductsPage(currentPage + 1, selectedCategory, sortBy);
         }
     };
 
-    // --- MANEJADOR CAMBIO DE CATEGORÍA ---
+    // Cambiar categoría
     const handleCategoryChange = (newCategory) => {
+        if (isLoadingMore) return; // Evita cambios mientras carga
         setSelectedCategory(newCategory);
-        fetchProductsPage(1, newCategory, sortBy); // Carga página 1 con nueva categoría
+        fetchProductsPage(1, newCategory, sortBy);
     };
 
-    // --- NUEVO MANEJADOR CAMBIO DE ORDENACIÓN ---
+    // Cambiar ordenación
     const handleSortChange = (newSortBy) => {
+        if (isLoadingMore) return; // Evita cambios mientras carga
         setSortBy(newSortBy);
-        fetchProductsPage(1, selectedCategory, newSortBy); // Carga página 1 con nueva ordenación
+        fetchProductsPage(1, selectedCategory, newSortBy);
     };
 
-    // Helper para imagen (sin cambios)
-    const getProductImage = (product) => { /* ... tu función getProductImage ... */ };
+    // Helper COMPLETO para obtener imagen
+    const getProductImage = (product) => {
+        switch (product?.product_type) { // Añade '?' por seguridad
+            case 'SIMPLE':
+                return product.image_url || '/logo-vidaanimada.png';
+            case 'VARIANT':
+                 // Busca la primera variante que TENGA imagen, si no, usa fallback
+                const firstVariantWithImage = product.product_variants?.find(v => v.variant_image_url);
+                return firstVariantWithImage?.variant_image_url || '/logo-vidaanimada.png';
+            case 'BUNDLE':
+                 // Busca la imagen de la variante del primer componente, si no, fallback
+                return product.bundle_links?.[0]?.product_variants?.variant_image_url || '/logo-vidaanimada.png';
+            default:
+                return '/logo-vidaanimada.png';
+        }
+    };
 
     return (
         <>
-            {/* ... (Head, Header) ... */}
+            <Head>
+                <title>Productos - Vida Animada</title>
+                <link rel="icon" href="/logo-vidaanimada.png" />
+            </Head>
+            <Header />
             <main>
                 <section className="page-section">
                     <h1>Explora Nuestros Productos</h1>
                     <p className="subtitle">Utiliza los filtros para encontrar tus productos favoritos.</p>
                     {initialError && <p className="error-message">{initialError}</p>}
 
-                    {/* --- CONTENEDOR DE FILTROS ACTUALIZADO --- */}
-                    <div className="filter-controls-container"> {/* Nuevo contenedor para agrupar */}
+                    {/* Contenedor de Filtros */}
+                    <div className="filter-controls-container">
                         <div className="filter-container">
                             <label htmlFor="category-filter">Categoría:</label>
                             <select
@@ -117,13 +141,16 @@ export default function CategoriasPage({ initialProducts, totalProducts, error: 
                                 onChange={(e) => handleCategoryChange(e.target.value)}
                                 disabled={isLoadingMore}
                             >
-                                {uniqueCategories.map(cat => (<option key={cat} value={cat}>{/*...*/}</option>))}
+                                {uniqueCategories.map(cat => (
+                                    <option key={cat} value={cat}>
+                                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                                    </option>
+                                ))}
                             </select>
                         </div>
-                        {/* --- NUEVO SELECT DE ORDENACIÓN --- */}
                         <div className="filter-container">
-                            <label htmlFor="sort-filter">Ordenar por:</label>
-                            <select
+                             <label htmlFor="sort-filter">Ordenar por:</label>
+                             <select
                                 id="sort-filter"
                                 value={sortBy}
                                 onChange={(e) => handleSortChange(e.target.value)}
@@ -135,20 +162,48 @@ export default function CategoriasPage({ initialProducts, totalProducts, error: 
                                 <option value="name-asc">Nombre: A-Z</option>
                             </select>
                         </div>
-                        {/* Conteo de productos */}
-                        <div className="product-count-display">
-                            <span>Mostrando {products.length} de {currentTotal}</span>
-                        </div>
+                         <div className="product-count-display">
+                             <span>Mostrando {products.length} de {currentTotal}</span>
+                         </div>
                     </div>
 
-                    {/* Grilla de Productos (sin cambios internos) */}
+                    {/* Grilla de Productos */}
                     <div className="product-grid">
-                        {/* ... tu .map(product => ...) ... */}
+                        {/* Verificación extra por si products es null/undefined */}
+                        {(products || []).map((product) => (
+                            <Link href={`/productos/${product.id}`} key={product.id} passHref>
+                                 <div className="product-card" style={{ cursor: 'pointer' }}>
+                                    {product.tag && <span className="product-tag">{product.tag}</span>}
+                                    <Image
+                                        src={getProductImage(product)} // Llama a la función helper
+                                        alt={product.name || 'Producto'} // Fallback para alt
+                                        width={300} height={280}
+                                        style={{ objectFit: 'cover', width: '100%', height: 'auto', aspectRatio: '300 / 280' }} // Estilos responsivos
+                                        // Podrías añadir un placeholder aquí
+                                    />
+                                    <h4>{product.name}</h4>
+                                    <p className="price">Desde ${product.base_price}</p>
+                                 </div>
+                            </Link>
+                        ))}
                     </div>
 
-                    {/* Controles de Paginación (sin cambios internos) */}
-                    <div className="pagination-controls" style={{ /*...*/ }}>
-                        {/* ... tu lógica isLoadingMore / hasMorePages ... */}
+                    {/* Controles de Paginación */}
+                    <div className="pagination-controls" style={{ marginTop: '2rem', textAlign: 'center' }}>
+                        {isLoadingMore ? (
+                            <p>Cargando...</p>
+                        ) : hasMorePages ? (
+                            <button onClick={loadMoreProducts} className="btn-primary">
+                                Cargar más productos
+                            </button>
+                        ) : (
+                             // Muestra mensaje solo si hay productos cargados
+                             products.length > 0 && currentTotal > 0 && <p>Has llegado al final.</p>
+                        )}
+                         {/* Muestra mensaje si no hay productos en absoluto para la categoría/filtro */}
+                         {!isLoadingMore && products.length === 0 && currentTotal === 0 && (
+                            <p>No hay productos que coincidan con los filtros seleccionados.</p>
+                         )}
                     </div>
                 </section>
             </main>
@@ -157,32 +212,18 @@ export default function CategoriasPage({ initialProducts, totalProducts, error: 
     );
 }
 
-// --- getStaticProps (ACTUALIZADO para paginación inicial) ---
+// --- getStaticProps (SIN CAMBIOS) ---
 export async function getStaticProps() {
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
+    // Re-inicializa cliente aquí por scope de server-side
+    const supabase_server = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     try {
-        const { data: initialProducts, error, count } = await supabase
-            .from('products')
-            .select(`
-              id, name, base_price, product_type, image_url, category, tag,
-              product_variants (variant_image_url),
-              bundle_links ( product_variants ( variant_image_url ) )
-          `, { count: 'exact' }) // <-- Pide el conteo total
-            .order('id', { ascending: false }) // O ordena por 'created_at', etc.
-            .range(0, PRODUCTS_PER_PAGE - 1); // <-- Carga solo la primera página
-
+        const { data: initialProducts, error, count } = await supabase_server
+          .from('products')
+          .select(`id, name, base_price, product_type, image_url, category, tag, product_variants(variant_image_url), bundle_links(product_variants(variant_image_url))`, { count: 'exact' })
+          .order('id', { ascending: false })
+          .range(0, PRODUCTS_PER_PAGE - 1);
         if (error) throw error;
-
-        // Pasamos los productos iniciales y el conteo total a la página
-        return {
-            props: {
-                initialProducts: initialProducts || [],
-                totalProducts: count || 0, // <-- Total de productos
-            },
-            revalidate: 60
-        };
-
+        return { props: { initialProducts: initialProducts || [], totalProducts: count || 0 }, revalidate: 60 };
     } catch (error) {
         console.error("Error fetching initial categories products:", error.message);
         return { props: { initialProducts: [], totalProducts: 0, error: "Error al cargar productos." } };

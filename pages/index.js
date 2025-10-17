@@ -11,7 +11,7 @@ export default function HomePage({ products }) {
     <>
       <Head>
         <title>Vida Animada</title>
-        <link rel="icon" href="/logo-vidaanimada.png" />
+        <link rel="icon" href="/logo-vidaanimada.png"/>
       </Head>
       <Header />
       <main>
@@ -23,10 +23,10 @@ export default function HomePage({ products }) {
               <Link href={`/productos/${product.id}`} key={product.id}>
                 <div className="product-card" style={{ cursor: 'pointer' }}>
                   {product.tag && <span className="product-tag">{product.tag}</span>}
-                  <Image
-                    src={product.product_colors[0]?.image_url || '/logo-vidaanimada.png'}
-                    alt={product.name}
-                    width={300} height={280}
+                  <Image 
+                    src={product.product_colors[0]?.image_url || '/logo-vidaanimada.png'} 
+                    alt={product.name} 
+                    width={300} height={280} 
                     style={{ objectFit: 'cover' }}
                   />
                   <h4>{product.name}</h4>
@@ -43,8 +43,8 @@ export default function HomePage({ products }) {
 }
 
 export async function getStaticProps() {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
+  const supabase = createClient( process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY );
+  
   // LA CORRECCIÓN CLAVE ESTÁ AQUÍ
   const { data: products } = await supabase
     .from('products')

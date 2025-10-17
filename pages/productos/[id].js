@@ -133,7 +133,7 @@ export async function getStaticPaths() {
 
 export async function getStaticProps({ params }) {
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
+    
     // LA CORRECCIÓN CLAVE ESTÁ AQUÍ
     const { data: product } = await supabase
         .from('products')
@@ -146,6 +146,6 @@ export async function getStaticProps({ params }) {
         `)
         .eq('id', params.id)
         .single();
-
+        
     return { props: { product }, revalidate: 10 };
 }

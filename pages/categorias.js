@@ -64,11 +64,11 @@ export default function CategoriasPage({ allProducts }) {
 
 export async function getStaticProps() {
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
+    
     // LA CORRECCIÓN CLAVE ESTÁ AQUÍ
     const { data: allProducts } = await supabase
-        .from('products')
-        .select(`
+      .from('products')
+      .select(`
         *,
         product_colors (
             *,

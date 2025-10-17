@@ -276,7 +276,6 @@ function ProductFormView({ product, onBack, onSave, allProducts }) {
                 // Asignar stock/imagen solo si es 'SIMPLE'
                 stock: productType === 'SIMPLE' ? parseInt(simpleStock, 10) : null,
                 image_url: productType === 'SIMPLE' ? imageUrl : null,
-                has_variants: productType === 'VARIANT' // <-- Mantenemos has_variants por ahora
             };
 
             let currentProductId = product?.id;

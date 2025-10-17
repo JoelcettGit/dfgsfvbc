@@ -41,14 +41,21 @@ export default function SearchPage({ products, searchTerm }) {
                                 <Link href={`/productos/${product.id}`} key={product.id} passHref>
                                     <div className="product-card" style={{ cursor: 'pointer' }}>
                                         {product.tag && <span className="product-tag">{product.tag}</span>}
-                                        <Image
-                                            src={getProductImage(product)}
-                                            alt={product.name}
-                                            width={300} height={280}
-                                            style={{ objectFit: 'cover' }}
-                                        />
-                                        <h4>{product.name}</h4>
-                                        <p className="price">Desde ${product.base_price}</p>
+                                        {/* Contenedor de Imagen */}
+                                        <div className="product-card-image-container">
+                                            <Image
+                                                src={getProductImage(product)}
+                                                alt={product.name || 'Producto'}
+                                                fill // Usa 'fill' para que la imagen llene el contenedor
+                                                style={{ objectFit: 'cover' }} // 'cover' para llenar, 'contain' para mostrar todo
+                                                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw" // Ayuda a Next/Image a optimizar
+                                            />
+                                        </div>
+                                        {/* Contenedor de Contenido */}
+                                        <div className="product-card-content">
+                                            <h4>{product.name}</h4>
+                                            <p className="price">Desde ${product.base_price}</p>
+                                        </div>
                                     </div>
                                 </Link>
                             ))}
@@ -101,7 +108,7 @@ export async function getServerSideProps(context) {
         };
 
     } catch (error) {
-         console.error("Error en getServerSideProps (search.js - ilike):", error.message);
-         return { props: { products: [], searchTerm: searchTerm.trim(), error: `Error al buscar.` } }; // Mensaje de error genérico
+        console.error("Error en getServerSideProps (search.js - ilike):", error.message);
+        return { props: { products: [], searchTerm: searchTerm.trim(), error: `Error al buscar.` } }; // Mensaje de error genérico
     }
 }

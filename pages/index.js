@@ -50,17 +50,21 @@ export default function HomePage({ products }) {
               <Link href={`/productos/${product.id}`} key={product.id}>
                 <div className="product-card" style={{ cursor: 'pointer' }}>
                   {product.tag && <span className="product-tag">{product.tag}</span>}
-
-                  {/* --- LÍNEA DE IMAGEN CORREGIDA --- */}
-                  <Image
-                    src={getProductImage(product)}
-                    alt={product.name}
-                    width={300} height={280}
-                    style={{ objectFit: 'cover' }}
-                  />
-
-                  <h4>{product.name}</h4>
-                  <p className="price">Desde ${product.base_price}</p>
+                  {/* Contenedor de Imagen */}
+                  <div className="product-card-image-container">
+                    <Image
+                      src={getProductImage(product)}
+                      alt={product.name || 'Producto'}
+                      fill // Usa 'fill' para que la imagen llene el contenedor
+                      style={{ objectFit: 'cover' }} // 'cover' para llenar, 'contain' para mostrar todo
+                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw" // Ayuda a Next/Image a optimizar
+                    />
+                  </div>
+                  {/* Contenedor de Contenido */}
+                  <div className="product-card-content">
+                    <h4>{product.name}</h4>
+                    <p className="price">Desde ${product.base_price}</p>
+                  </div>
                 </div>
               </Link>
             ))}
@@ -74,7 +78,7 @@ export default function HomePage({ products }) {
 
 // --- getStaticProps ACTUALIZADO (para traer imagen de bundles) ---
 export async function getStaticProps() {
-  const supabase = createClient( process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY );
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   const { data: products, error } = await supabase
     .from('products')

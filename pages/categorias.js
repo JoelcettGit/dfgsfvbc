@@ -41,9 +41,9 @@ export default function CategoriasPage({ initialProducts, totalProducts, error: 
                 setUniqueCategories(categories);
 
             } catch (err) {
-                 console.error("Error fetching distinct categories:", err.message);
-                 // Mantener solo 'todos' si falla
-                 setUniqueCategories(['todos']);
+                console.error("Error fetching distinct categories:", err.message);
+                // Mantener solo 'todos' si falla
+                setUniqueCategories(['todos']);
             }
         };
         fetchCategories();
@@ -57,8 +57,8 @@ export default function CategoriasPage({ initialProducts, totalProducts, error: 
         try {
             const response = await fetch(`/api/products?page=${page}&category=${category}&sort=${sort}`);
             if (!response.ok) {
-                 const errorData = await response.json(); // Intenta leer el error de la API
-                 throw new Error(errorData.message || 'Error al cargar productos desde API');
+                const errorData = await response.json(); // Intenta leer el error de la API
+                throw new Error(errorData.message || 'Error al cargar productos desde API');
             }
             const data = await response.json();
 
@@ -107,11 +107,11 @@ export default function CategoriasPage({ initialProducts, totalProducts, error: 
             case 'SIMPLE':
                 return product.image_url || '/logo-vidaanimada.png';
             case 'VARIANT':
-                 // Busca la primera variante que TENGA imagen, si no, usa fallback
+                // Busca la primera variante que TENGA imagen, si no, usa fallback
                 const firstVariantWithImage = product.product_variants?.find(v => v.variant_image_url);
                 return firstVariantWithImage?.variant_image_url || '/logo-vidaanimada.png';
             case 'BUNDLE':
-                 // Busca la imagen de la variante del primer componente, si no, fallback
+                // Busca la imagen de la variante del primer componente, si no, fallback
                 return product.bundle_links?.[0]?.product_variants?.variant_image_url || '/logo-vidaanimada.png';
             default:
                 return '/logo-vidaanimada.png';
@@ -149,8 +149,8 @@ export default function CategoriasPage({ initialProducts, totalProducts, error: 
                             </select>
                         </div>
                         <div className="filter-container">
-                             <label htmlFor="sort-filter">Ordenar por:</label>
-                             <select
+                            <label htmlFor="sort-filter">Ordenar por:</label>
+                            <select
                                 id="sort-filter"
                                 value={sortBy}
                                 onChange={(e) => handleSortChange(e.target.value)}
@@ -162,9 +162,9 @@ export default function CategoriasPage({ initialProducts, totalProducts, error: 
                                 <option value="name-asc">Nombre: A-Z</option>
                             </select>
                         </div>
-                         <div className="product-count-display">
-                             <span>Mostrando {products.length} de {currentTotal}</span>
-                         </div>
+                        <div className="product-count-display">
+                            <span>Mostrando {products.length} de {currentTotal}</span>
+                        </div>
                     </div>
 
                     {/* Grilla de Productos */}
@@ -172,18 +172,24 @@ export default function CategoriasPage({ initialProducts, totalProducts, error: 
                         {/* Verificación extra por si products es null/undefined */}
                         {(products || []).map((product) => (
                             <Link href={`/productos/${product.id}`} key={product.id} passHref>
-                                 <div className="product-card" style={{ cursor: 'pointer' }}>
+                                <div className="product-card" style={{ cursor: 'pointer' }}>
                                     {product.tag && <span className="product-tag">{product.tag}</span>}
-                                    <Image
-                                        src={getProductImage(product)} // Llama a la función helper
-                                        alt={product.name || 'Producto'} // Fallback para alt
-                                        width={300} height={280}
-                                        style={{ objectFit: 'cover', width: '100%', height: 'auto', aspectRatio: '300 / 280' }} // Estilos responsivos
-                                        // Podrías añadir un placeholder aquí
-                                    />
-                                    <h4>{product.name}</h4>
-                                    <p className="price">Desde ${product.base_price}</p>
-                                 </div>
+                                    {/* Contenedor de Imagen */}
+                                    <div className="product-card-image-container">
+                                        <Image
+                                            src={getProductImage(product)}
+                                            alt={product.name || 'Producto'}
+                                            fill // Usa 'fill' para que la imagen llene el contenedor
+                                            style={{ objectFit: 'cover' }} // 'cover' para llenar, 'contain' para mostrar todo
+                                            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw" // Ayuda a Next/Image a optimizar
+                                        />
+                                    </div>
+                                    {/* Contenedor de Contenido */}
+                                    <div className="product-card-content">
+                                        <h4>{product.name}</h4>
+                                        <p className="price">Desde ${product.base_price}</p>
+                                    </div>
+                                </div>
                             </Link>
                         ))}
                     </div>
@@ -197,13 +203,13 @@ export default function CategoriasPage({ initialProducts, totalProducts, error: 
                                 Cargar más productos
                             </button>
                         ) : (
-                             // Muestra mensaje solo si hay productos cargados
-                             products.length > 0 && currentTotal > 0 && <p>Has llegado al final.</p>
+                            // Muestra mensaje solo si hay productos cargados
+                            products.length > 0 && currentTotal > 0 && <p>Has llegado al final.</p>
                         )}
-                         {/* Muestra mensaje si no hay productos en absoluto para la categoría/filtro */}
-                         {!isLoadingMore && products.length === 0 && currentTotal === 0 && (
+                        {/* Muestra mensaje si no hay productos en absoluto para la categoría/filtro */}
+                        {!isLoadingMore && products.length === 0 && currentTotal === 0 && (
                             <p>No hay productos que coincidan con los filtros seleccionados.</p>
-                         )}
+                        )}
                     </div>
                 </section>
             </main>
@@ -218,10 +224,10 @@ export async function getStaticProps() {
     const supabase_server = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     try {
         const { data: initialProducts, error, count } = await supabase_server
-          .from('products')
-          .select(`id, name, base_price, product_type, image_url, category, tag, product_variants(variant_image_url), bundle_links(product_variants(variant_image_url))`, { count: 'exact' })
-          .order('id', { ascending: false })
-          .range(0, PRODUCTS_PER_PAGE - 1);
+            .from('products')
+            .select(`id, name, base_price, product_type, image_url, category, tag, product_variants(variant_image_url), bundle_links(product_variants(variant_image_url))`, { count: 'exact' })
+            .order('id', { ascending: false })
+            .range(0, PRODUCTS_PER_PAGE - 1);
         if (error) throw error;
         return { props: { initialProducts: initialProducts || [], totalProducts: count || 0 }, revalidate: 60 };
     } catch (error) {

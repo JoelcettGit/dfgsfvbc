@@ -1,7 +1,7 @@
 // pages/productos/[id].js
+import { createClient } from '@supabase/supabase-js';
 import Head from 'next/head';
 import Image from 'next/image';
-import { createClient } from '@supabase/supabase-js';
 import { useState, useEffect, useMemo } from 'react';
 import { useCart } from '../../context/CartContext';
 import Header from '../../components/Header';
@@ -126,7 +126,8 @@ export default function ProductPage({ product }) {
 
 export async function getStaticPaths() {
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-    const { data: products } = await supabase.from('products').select('id');
+    const { data: products, error } = await supabase.from('products').select('id');
+    if (error || !products) return { paths: [], fallback: 'blocking' };
     const paths = products.map(product => ({ params: { id: product.id.toString() } }));
     return { paths, fallback: 'blocking' };
 }
@@ -134,8 +135,8 @@ export async function getStaticPaths() {
 export async function getStaticProps({ params }) {
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     
-    // LA CORRECCIÓN CLAVE ESTÁ AQUÍ
-    const { data: product } = await supabase
+    // --- CONSULTA CORREGIDA ---
+    const { data: product, error } = await supabase
         .from('products')
         .select(`
             *,
@@ -146,6 +147,17 @@ export async function getStaticProps({ params }) {
         `)
         .eq('id', params.id)
         .single();
+    
+    if (error) {
+        console.error(`Error fetching product with id ${params.id}:`, error);
+    }
         
+    // Si el producto no se encuentra, devolvemos notFound para que muestre una página 404
+    if (!product) {
+        return {
+            notFound: true,
+        };
+    }
+    
     return { props: { product }, revalidate: 10 };
 }

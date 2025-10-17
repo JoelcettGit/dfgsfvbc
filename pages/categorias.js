@@ -65,8 +65,8 @@ export default function CategoriasPage({ allProducts }) {
 export async function getStaticProps() {
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     
-    // LA CORRECCIÓN CLAVE ESTÁ AQUÍ
-    const { data: allProducts } = await supabase
+    // --- CONSULTA CORREGIDA ---
+    const { data: allProducts, error } = await supabase
       .from('products')
       .select(`
         *,
@@ -75,6 +75,10 @@ export async function getStaticProps() {
             product_variants (*)
         )
       `);
+
+    if (error) {
+        console.error("Error fetching categories products:", error);
+    }
 
     return { props: { allProducts: allProducts || [] }, revalidate: 10 };
 }

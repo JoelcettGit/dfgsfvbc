@@ -72,12 +72,13 @@ export default function CategoriasPage({ allProducts }) {
 // --- getStaticProps ACTUALIZADO (para traer product_type) ---
 export async function getStaticProps() {
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
+    
+    // --- CONSULTA CORREGIDA (SIN COMENTARIOS) ---
     const { data: allProducts, error } = await supabase
-        .from('products')
-        .select(`
-          id, name, base_price, product_type, image_url, category, tag, /* <-- Traer product_type e image_url */
-          product_variants (variant_image_url) /* Solo imagen de primera variante */
+      .from('products')
+      .select(`
+          id, name, base_price, product_type, image_url, category, tag, 
+          product_variants (variant_image_url)
       `);
 
     if (error) {

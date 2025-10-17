@@ -73,17 +73,17 @@ export default function HomePage({ products }) {
   );
 }
 
-// --- getStaticProps ACTUALIZADO (para traer product_type) ---
 export async function getStaticProps() {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
+  const supabase = createClient( process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY );
+  
+  // --- CONSULTA CORREGIDA (SIN COMENTARIOS) ---
   const { data: products, error } = await supabase
     .from('products')
     .select(`
-        id, name, base_price, product_type, image_url, tag, /* <-- Traer product_type e image_url */
-        product_variants (variant_image_url) /* Solo necesitamos la imagen de la primera variante */
+        id, name, base_price, product_type, image_url, tag, 
+        product_variants (variant_image_url) 
     `)
-    .eq('tag', 'Destacado');
+    .eq('tag', 'Destacado'); 
 
   if (error) {
     console.error("Error fetching featured products:", error.message);

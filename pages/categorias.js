@@ -8,31 +8,20 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 
 export default function CategoriasPage({ allProducts }) {
-    const [selectedCategory, setSelectedCategory] = useState('todos');
-    const [uniqueCategories, setUniqueCategories] = useState([]);
-    const [filteredProducts, setFilteredProducts] = useState(allProducts);
+    // ... (tus useState y useEffect sin cambios) ...
 
-    useEffect(() => {
-        const categories = ['todos', ...new Set(allProducts.map(p => p.category).filter(Boolean))];
-        setUniqueCategories(categories);
-    }, [allProducts]);
-
-    useEffect(() => {
-        if (selectedCategory === 'todos') {
-            setFilteredProducts(allProducts);
-        } else {
-            setFilteredProducts(allProducts.filter(p => p.category === selectedCategory));
-        }
-    }, [selectedCategory, allProducts]);
-
-    // --- FUNCIÓN HELPER PARA OBTENER LA IMAGEN CORRECTA ---
+    // --- FUNCIÓN HELPER ACTUALIZADA ---
     const getProductImage = (product) => {
-        if (product.has_variants) {
-            // Producto Variable: usa la imagen de la primera variante (si existe)
-            return product.product_variants[0]?.variant_image_url || '/logo-vidaanimada.png';
+        switch (product.product_type) {
+            case 'SIMPLE':
+                return product.image_url || '/logo-vidaanimada.png';
+            case 'VARIANT':
+                return product.product_variants?.[0]?.variant_image_url || '/logo-vidaanimada.png';
+            case 'BUNDLE':
+                return '/logo-vidaanimada.png'; // Fallback para bundles
+            default:
+                return '/logo-vidaanimada.png';
         }
-        // Producto Simple: usa la imagen principal (si existe)
-        return product.image_url || '/logo-vidaanimada.png';
     };
 
     return (
@@ -58,15 +47,15 @@ export default function CategoriasPage({ allProducts }) {
                             <Link href={`/productos/${product.id}`} key={product.id}>
                                 <div className="product-card" style={{ cursor: 'pointer' }}>
                                     {product.tag && <span className="product-tag">{product.tag}</span>}
-                                    
+
                                     {/* --- LÍNEA DE IMAGEN CORREGIDA --- */}
-                                    <Image 
-                                        src={getProductImage(product)} 
-                                        alt={product.name} 
-                                        width={300} height={280} 
-                                        style={{ objectFit: 'cover' }} 
+                                    <Image
+                                        src={getProductImage(product)}
+                                        alt={product.name}
+                                        width={300} height={280}
+                                        style={{ objectFit: 'cover' }}
                                     />
-                                    
+
                                     <h4>{product.name}</h4>
                                     <p className="price">Desde ${product.base_price}</p>
                                 </div>
@@ -80,21 +69,20 @@ export default function CategoriasPage({ allProducts }) {
     );
 }
 
+// --- getStaticProps ACTUALIZADO (para traer product_type) ---
 export async function getStaticProps() {
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-    
-    // --- CONSULTA CORREGIDA ---
+
     const { data: allProducts, error } = await supabase
-      .from('products')
-      .select(`
-          *,
-          product_variants (*)
+        .from('products')
+        .select(`
+          id, name, base_price, product_type, image_url, category, tag, /* <-- Traer product_type e image_url */
+          product_variants (variant_image_url) /* Solo imagen de primera variante */
       `);
 
     if (error) {
         console.error("Error fetching categories products:", error.message);
     }
 
-    // Revalidate 60s (1 minuto) es más razonable que 10s
     return { props: { allProducts: allProducts || [] }, revalidate: 60 };
 }

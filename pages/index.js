@@ -8,32 +8,40 @@ import Footer from '../components/Footer';
 
 export default function HomePage({ products }) {
 
-    // --- FUNCIÓN HELPER PARA OBTENER LA IMAGEN CORRECTA ---
-    const getProductImage = (product) => {
-        if (product.has_variants) {
-            // Producto Variable: usa la imagen de la primera variante (si existe)
-            return product.product_variants[0]?.variant_image_url || '/logo-vidaanimada.png';
-        }
-        // Producto Simple: usa la imagen principal (si existe)
+  // --- FUNCIÓN HELPER ACTUALIZADA ---
+  const getProductImage = (product) => {
+    switch (product.product_type) {
+      case 'SIMPLE':
+        // Simple: usa image_url
         return product.image_url || '/logo-vidaanimada.png';
-    };
+      case 'VARIANT':
+        // Variant: usa la imagen de la primera variante
+        return product.product_variants?.[0]?.variant_image_url || '/logo-vidaanimada.png';
+      case 'BUNDLE':
+        // Bundle: En listados, usamos el fallback.
+        // Mostrar imagen de componente requeriría más datos.
+        return '/logo-vidaanimada.png';
+      default:
+        return '/logo-vidaanimada.png';
+    }
+  };
 
   return (
     <>
       <Head>
         <title>Vida Animada</title>
-        <link rel="icon" href="/logo-vidaanimada.png"/>
+        <link rel="icon" href="/logo-vidaanimada.png" />
       </Head>
       <Header />
       <main>
         <section id="inicio" className="hero-section">
-            <div className="hero-content">
-                <h1>Animamos tus días con pequeños detalles</h1>
-                <p>Descubre un mundo de color y alegría para ti y tu familia.</p>
-                <Link href="/categorias" className="btn-primary">
-                  Ver Productos
-                </Link>
-            </div>
+          <div className="hero-content">
+            <h1>Animamos tus días con pequeños detalles</h1>
+            <p>Descubre un mundo de color y alegría para ti y tu familia.</p>
+            <Link href="/categorias" className="btn-primary">
+              Ver Productos
+            </Link>
+          </div>
         </section>
 
         <section id="productos" className="content-section-alt">
@@ -43,12 +51,12 @@ export default function HomePage({ products }) {
               <Link href={`/productos/${product.id}`} key={product.id}>
                 <div className="product-card" style={{ cursor: 'pointer' }}>
                   {product.tag && <span className="product-tag">{product.tag}</span>}
-                  
+
                   {/* --- LÍNEA DE IMAGEN CORREGIDA --- */}
-                  <Image 
-                    src={getProductImage(product)} 
-                    alt={product.name} 
-                    width={300} height={280} 
+                  <Image
+                    src={getProductImage(product)}
+                    alt={product.name}
+                    width={300} height={280}
                     style={{ objectFit: 'cover' }}
                   />
 
@@ -65,22 +73,21 @@ export default function HomePage({ products }) {
   );
 }
 
+// --- getStaticProps ACTUALIZADO (para traer product_type) ---
 export async function getStaticProps() {
-  const supabase = createClient( process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY );
-  
-  // --- CONSULTA CORREGIDA ---
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
   const { data: products, error } = await supabase
     .from('products')
     .select(`
-        *,
-        product_variants (*)
+        id, name, base_price, product_type, image_url, tag, /* <-- Traer product_type e image_url */
+        product_variants (variant_image_url) /* Solo necesitamos la imagen de la primera variante */
     `)
-    .eq('tag', 'Destacado'); // Filtra por productos 'Destacados'
+    .eq('tag', 'Destacado');
 
   if (error) {
     console.error("Error fetching featured products:", error.message);
   }
 
-  // Revalidate 60s
   return { props: { products: products || [] }, revalidate: 60 };
 }

@@ -10,8 +10,6 @@ import Footer from '../../components/Footer';
 
 // Importar Carousel y sus estilos
 import "react-responsive-carousel/lib/styles/carousel.min.css";
-import { Carousel } from 'react-responsive-carousel';
-
 // Cliente Supabase
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
@@ -24,7 +22,7 @@ export default function ProductPage({ product, recommendedProducts }) {
     // Estado para tipo 'BUNDLE' (guarda { linkId: variantId, ... })
     const [selectedBundleVariants, setSelectedBundleVariants] = useState({});
     const [currentSlide, setCurrentSlide] = useState(0);
-
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
     // --- Lógica Derivada ---
 
     // Colores disponibles (solo para 'VARIANT')
@@ -193,27 +191,24 @@ export default function ProductPage({ product, recommendedProducts }) {
                 if (!product.bundle_links || product.bundle_links.length === 0) {
                     return [{ url: '/logo-vidaanimada.png', alt: product.name }];
                 }
-                // Mapea cada componente a su imagen de variante seleccionada
-                return product.bundle_links.map(link => {
-                    const selectedVariantId = selectedBundleVariants[link.id];
-                    const variant = link.product_variants_options?.find(v => v.id === selectedVariantId);
-                    // Prioriza imagen de variante, luego imagen de producto componente, luego fallback
-                    const imageUrl = variant?.variant_image_url || link.component_product?.image_url || '/logo-vidaanimada.png';
-                    const altText = `${link.component_product?.name || 'Pieza'} ${variant?.size || ''}`;
+                // Mapea CADA componente a su imagen (puede haber duplicados si tienen la misma imagen)
+                const bundleImages = product.bundle_links.map(link => {
+                    // NO usamos selectedBundleVariants aquí para que la lista de thumbs sea estable
+                    const firstVariantOption = link.product_variants_options?.[0]; // Tomamos la primera opción como representativa
+                    const imageUrl = firstVariantOption?.variant_image_url || link.component_product?.image_url || '/logo-vidaanimada.png';
+                    const altText = `${link.component_product?.name || 'Pieza'}`;
                     return { url: imageUrl, alt: altText };
-                }).filter(img => img.url); // Filtra por si alguna URL falla
-
+                }).filter(img => img.url);
+                // Evitar duplicados si ambas piezas usan la misma imagen (opcional)
+                const uniqueImages = Array.from(new Map(bundleImages.map(img => [img.url, img])).values());
+                return uniqueImages.length > 0 ? uniqueImages : [{ url: '/logo-vidaanimada.png', alt: product.name }];
             default:
                 return [{ url: '/logo-vidaanimada.png', alt: 'Producto' }];
         }
-    }, [product, selectedColor, selectedVariant, selectedBundleVariants]); // Depende de las selecciones
-    // --- ¡NUEVO! Handler para actualizar el slide actual ---
-    const handleSlideChange = (index) => {
-        setCurrentSlide(index);
-    };
+    }, [product, selectedColor]);
     useEffect(() => {
-        setCurrentSlide(0); // Vuelve al primer slide cuando cambian las imágenes base
-    }, [product, selectedColor]); // Depende del producto y color (no de los talles del bundle)
+        setCurrentImageIndex(0); // Vuelve a la primera imagen
+    }, [displayImages]); // Se ejecuta si el array 'displayImages' cambia
 
     if (!product) return <div>Cargando...</div>;
     // Determinar si el botón de añadir debe estar deshabilitado
@@ -231,41 +226,41 @@ export default function ProductPage({ product, recommendedProducts }) {
             default: return '/logo-vidaanimada.png';
         }
     };
-
+    // Imagen principal actual
+    const mainImageUrl = displayImages[currentImageIndex]?.url || '/logo-vidaanimada.png';
+    const mainImageAlt = displayImages[currentImageIndex]?.alt || product.name;
     return (
         <>
-            <Head><title>{product.name} - Vida Animada</title></Head>
+            <Head>
+                <title>{product.name} - Vida Animada</title>
+                <link rel="icon" href="/logo-vidaanimada.png" />
+            </Head>
             <Header />
             <main>
                 <section className="page-section">
-                    <div className="product-detail-layout">
-                        {/* --- SECCIÓN DE IMAGEN CON CAROUSEL --- */}
-                        <div className="product-image-section">
-                            <Carousel
-                                showArrows={sliderImages.length > 1}
-                                showThumbs={sliderImages.length > 1}
-                                showStatus={false}
-                                infiniteLoop={sliderImages.length > 1}
-                                useKeyboardArrows={true}
-                                className="product-carousel"
-                                // --- ¡CAMBIOS AQUÍ! ---
-                                selectedItem={currentSlide} // Controlamos el item seleccionado
-                                onChange={handleSlideChange} // Actualizamos el estado al cambiar
-                            // key ya fue eliminada
-                            >
-                                {sliderImages.map((image, index) => (
-                                    <div key={index} style={{ borderRadius: '15px', overflow: 'hidden' }}>
-                                        <Image
-                                            src={image.url} alt={image.alt}
-                                            width={500} height={500}
-                                            style={{ objectFit: 'cover', display: 'block' }}
-                                            priority={index === 0}
-                                        />
-                                    </div>
-                                ))}
-                            </Carousel>
-                        </div>
+                    <div className="product-detail-layout-gallery"> {/* Nueva clase contenedora */}
 
+                        {/* --- Columna de Miniaturas (Thumbnails) --- */}
+                        {displayImages.length > 1 && ( // Solo muestra si hay más de 1 imagen
+                            <div className="product-thumbnails">
+                                {displayImages.map((image, index) => (
+                                    <button
+                                        key={index}
+                                        className={`thumbnail-item ${index === currentImageIndex ? 'active' : ''}`}
+                                        onClick={() => setCurrentImageIndex(index)}
+                                        aria-label={`Ver imagen ${index + 1} de ${displayImages.length}`}
+                                    >
+                                        <Image
+                                            src={image.url}
+                                            alt={`Miniatura ${image.alt}`}
+                                            width={80} // Tamaño de miniatura
+                                            height={80} // Tamaño de miniatura
+                                            style={{ objectFit: 'cover', display: 'block' }}
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                         {/* --- Sección de Información y Selectores --- */}
                         <div className="product-info-section">
                             <h1>{product.name}</h1>

@@ -977,99 +977,88 @@ h2 {
   background-color: #f5f5f5;
   cursor: not-allowed;
 }
-/* --- Estilos Personalizados para Flechas React Responsive Carousel --- */
 
-/* Asegurar visibilidad y posicionamiento base */
-.product-carousel .control-arrow {
-  display: block; /* Asegura que no esté oculto por defecto */
-  visibility: visible; /* Asegura visibilidad */
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10;
-  opacity: 0.7;
-  background-color: rgba(0, 0, 0, 0.4);
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
+/* --- Estilos para Galería Simple de Producto --- */
+
+/* Contenedor principal con 3 columnas */
+.product-detail-layout-gallery {
+  display: grid;
+  /* Por defecto 1 columna en móvil */
+  grid-template-columns: 1fr; 
+  gap: 2rem;
+  align-items: start; /* Alinea items al inicio */
+}
+
+/* Columna de Miniaturas */
+.product-thumbnails {
+  display: flex;
+  flex-direction: row; /* Horizontal en móvil por defecto */
+  gap: 0.75rem;
+  order: 2; /* Poner debajo de la imagen principal en móvil */
+  overflow-x: auto; /* Scroll horizontal si no caben */
+  padding-bottom: 10px; /* Espacio para scrollbar */
+}
+.thumbnail-item {
   padding: 0;
-  cursor: pointer; /* Añadir cursor pointer */
-  transition: opacity 0.3s ease, background-color 0.3s ease;
-}
-
-.product-carousel .control-arrow:hover {
-  opacity: 1;
-  background-color: rgba(0, 0, 0, 0.6);
-}
-
-/* Posición Izquierda/Derecha */
-.product-carousel .control-arrow.control-prev {
-  left: 15px;
-}
-.product-carousel .control-arrow.control-next {
-  right: 15px;
-}
-
-/* Estilo del icono de flecha (asegurar que se muestre) */
-.product-carousel .control-arrow::before {
-  content: ''; /* Asegurar que el pseudo-elemento exista */
-  display: block; /* Asegurar que se muestre */
-  border-style: solid;
-  border-color: white; /* Color de la flecha */
-  border-width: 0 3px 3px 0; /* Grosor y forma de la flecha */
-  width: 10px; /* Tamaño del icono */
-  height: 10px;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-}
-
-.product-carousel .control-arrow.control-prev::before {
-  border-width: 3px 0 0 3px; /* Cambiar dirección */
-  transform: translate(-50%, -50%) rotate(45deg); /* Centrar y rotar */
-   /* Ajuste fino si es necesario: transform: translate(-40%, -50%) rotate(45deg); */
-}
-
-.product-carousel .control-arrow.control-next::before {
-   border-width: 3px 3px 0 0; /* Cambiar dirección */
-   transform: translate(-50%, -50%) rotate(45deg); /* Centrar y rotar */
-   /* Ajuste fino si es necesario: transform: translate(-60%, -50%) rotate(45deg); */
-}
-
-
-/* Ocultar flechas deshabilitadas (si infiniteLoop es false) */
-.product-carousel .control-arrow.control-disabled {
-  display: none !important; /* Forzar ocultación */
-}
-
-/* Miniaturas (Thumbs) */
-.product-carousel .thumbs-wrapper {
-  margin-top: 10px; /* Espacio entre slider y thumbs */
-  overflow: hidden; /* Evita desbordamiento si hay muchas thumbs */
-}
-
-.product-carousel .thumb {
-  border: 2px solid transparent; /* Borde inicial */
-  border-radius: 8px; /* Bordes redondeados */
-  padding: 3px; /* Espacio interno */
-  height: 60px; /* Altura fija para las miniaturas */
-  width: 60px !important; /* Ancho fijo (importante para sobreescribir) */
-  box-sizing: border-box;
+  border: 2px solid transparent;
+  border-radius: 8px;
   cursor: pointer;
+  background: none;
+  overflow: hidden; /* Asegura bordes redondeados en imagen */
+  flex-shrink: 0; /* Evita que se encojan */
+  width: 80px; /* Ancho fijo */
+  height: 80px; /* Alto fijo */
   transition: border-color 0.3s ease;
 }
-.product-carousel .thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* Asegura que la imagen cubra el espacio */
+.thumbnail-item:hover,
+.thumbnail-item.active {
+  border-color: var(--color-pink);
+}
+.thumbnail-item img {
   border-radius: 6px; /* Borde interno redondeado */
 }
 
-.product-carousel .thumb.selected,
-.product-carousel .thumb:hover {
-  border-color: var(--color-pink); /* Borde rosa al seleccionar/hover */
+/* Columna Imagen Principal */
+.product-main-image {
+  order: 1; /* Poner arriba en móvil */
+  width: 100%; /* Ocupa todo el ancho disponible */
+}
+.product-main-image img {
+   width: 100%; /* Hace la imagen responsiva dentro de su contenedor */
+   height: auto; /* Mantiene la proporción */
+   max-height: 70vh; /* Limita la altura máxima */
+   object-fit: cover; /* Asegura que cubra bien */
 }
 
+
+/* Columna de Información */
+.product-info-section {
+  order: 3; /* Al final en móvil */
+  text-align: left; /* Asegura alineación izquierda */
+}
+
+/* --- Media Query para Escritorio (ej: > 768px) --- */
+@media (min-width: 768px) {
+  .product-detail-layout-gallery {
+    /* 3 columnas: Thumbnails | Imagen Principal | Info */
+    grid-template-columns: 100px 1fr 1fr; /* Ajusta anchos según necesites */
+    gap: 3rem; /* Más espacio en escritorio */
+  }
+  .product-thumbnails {
+    flex-direction: column; /* Vertical en escritorio */
+    order: 1; /* Primera columna */
+    overflow-x: visible; /* Quitar scroll horizontal */
+    overflow-y: auto; /* Permitir scroll vertical si hay muchas */
+    max-height: 600px; /* Limita altura (ajusta a la imagen principal) */
+    padding-bottom: 0;
+  }
+  .product-main-image {
+    order: 2; /* Segunda columna */
+  }
+  .product-info-section {
+    order: 3; /* Tercera columna */
+  }
+}
 /* --- 5. ANIMACIONES --- */
 @keyframes moveGradient {
   0% { background-position: 0% 50%; }

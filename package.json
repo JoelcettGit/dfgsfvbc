@@ -13,8 +13,7 @@
     "next": "15.5.5",
     "react": "19.1.0",
     "react-color": "^2.19.3",
-    "react-dom": "19.1.0",
-    "react-responsive-carousel": "^3.2.23"
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

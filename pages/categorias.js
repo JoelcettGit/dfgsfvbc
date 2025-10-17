@@ -13,17 +13,11 @@ export default function CategoriasPage({ allProducts }) {
     const [filteredProducts, setFilteredProducts] = useState(allProducts);
 
     useEffect(() => {
-        // Asegúrate de que allProducts no sea null o undefined antes de mapear
-        const categories = ['todos', ...new Set((allProducts || []).map(p => p.category).filter(Boolean))];
+        const categories = ['todos', ...new Set(allProducts.map(p => p.category).filter(Boolean))];
         setUniqueCategories(categories);
     }, [allProducts]);
 
     useEffect(() => {
-        // Asegúrate de que allProducts no sea null o undefined
-        if (!allProducts) {
-            setFilteredProducts([]);
-            return;
-        }
         if (selectedCategory === 'todos') {
             setFilteredProducts(allProducts);
         } else {
@@ -50,28 +44,16 @@ export default function CategoriasPage({ allProducts }) {
                         </select>
                     </div>
                     <div className="product-grid">
-                        {/* Verifica si hay productos filtrados antes de mapear */}
-                        {filteredProducts && filteredProducts.length > 0 ? (
-                            filteredProducts.map((product) => (
-                                <Link href={`/productos/${product.id}`} key={product.id}>
-                                    <div className="product-card" style={{ cursor: 'pointer' }}>
-                                        {product.tag && <span className="product-tag">{product.tag}</span>}
-                                        {/* Acceso seguro a la imagen */}
-                                        <Image 
-                                            src={product.product_colors?.[0]?.image_url || '/logo-vidaanimada.png'} 
-                                            alt={product.name} 
-                                            width={300} height={280} 
-                                            style={{ objectFit: 'cover' }}
-                                            onError={(e) => { e.target.src = '/logo-vidaanimada.png'; }}
-                                        />
-                                        <h4>{product.name}</h4>
-                                        <p className="price">Desde ${product.base_price}</p>
-                                    </div>
-                                </Link>
-                            ))
-                        ) : (
-                            <p>No hay productos en esta categoría.</p>
-                        )}
+                        {filteredProducts.map((product) => (
+                            <Link href={`/productos/${product.id}`} key={product.id}>
+                                <div className="product-card" style={{ cursor: 'pointer' }}>
+                                    {product.tag && <span className="product-tag">{product.tag}</span>}
+                                    <Image src={product.product_colors[0]?.image_url || '/logo-vidaanimada.png'} alt={product.name} width={300} height={280} style={{ objectFit: 'cover' }} />
+                                    <h4>{product.name}</h4>
+                                    <p className="price">Desde ${product.base_price}</p>
+                                </div>
+                            </Link>
+                        ))}
                     </div>
                 </section>
             </main>

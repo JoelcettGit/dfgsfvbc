@@ -15,7 +15,7 @@ export default function HomePage({ products }) {
       </Head>
       <Header />
       <main>
-        {/* CORRECCIÓN: Restaura la sección hero completa */}
+        {/* --- SECCIÓN RESTAURADA --- */}
         <section id="inicio" className="hero-section">
             <div className="hero-content">
                 <h1>Animamos tus días con pequeños detalles</h1>
@@ -25,31 +25,25 @@ export default function HomePage({ products }) {
                 </Link>
             </div>
         </section>
+
         <section id="productos" className="content-section-alt">
           <h2>Productos Destacados</h2>
           <div className="product-grid">
-            {/* Verifica si hay productos antes de mapear */}
-            {products && products.length > 0 ? (
-              products.map((product) => (
-                <Link href={`/productos/${product.id}`} key={product.id}>
-                  <div className="product-card" style={{ cursor: 'pointer' }}>
-                    {product.tag && <span className="product-tag">{product.tag}</span>}
-                    {/* Acceso seguro a la imagen del primer color */}
-                    <Image
-                      src={product.product_colors?.[0]?.image_url || '/logo-vidaanimada.png'} // Usa optional chaining
-                      alt={product.name}
-                      width={300} height={280}
-                      style={{ objectFit: 'cover' }}
-                      onError={(e) => { e.target.src = '/logo-vidaanimada.png'; }} // Fallback por si la URL es inválida o no hay colores
-                    />
-                    <h4>{product.name}</h4>
-                    <p className="price">Desde ${product.base_price}</p>
-                  </div>
-                </Link>
-              ))
-            ) : (
-              <p>No hay productos destacados en este momento.</p> // Mensaje si no hay productos
-            )}
+            {products.map((product) => (
+              <Link href={`/productos/${product.id}`} key={product.id}>
+                <div className="product-card" style={{ cursor: 'pointer' }}>
+                  {product.tag && <span className="product-tag">{product.tag}</span>}
+                  <Image 
+                    src={product.product_colors[0]?.image_url || '/logo-vidaanimada.png'} 
+                    alt={product.name} 
+                    width={300} height={280} 
+                    style={{ objectFit: 'cover' }}
+                  />
+                  <h4>{product.name}</h4>
+                  <p className="price">Desde ${product.base_price}</p>
+                </div>
+              </Link>
+            ))}
           </div>
         </section>
       </main>
@@ -61,7 +55,6 @@ export default function HomePage({ products }) {
 export async function getStaticProps() {
   const supabase = createClient( process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY );
   
-  // --- CONSULTA CORREGIDA ---
   const { data: products, error } = await supabase
     .from('products')
     .select(`
@@ -72,19 +65,10 @@ export async function getStaticProps() {
         )
     `)
     .eq('tag', 'Destacado');
-    // Nota: El filtro de stock complejo puede fallar con RLS. Simplificamos para asegurar que funcione.
-    // .filter('product_colors.product_variants.stock', 'gt', 0); 
-  
+
   if (error) {
     console.error("Error fetching featured products:", error);
   }
 
-  // Filtro de stock en el lado del cliente (más seguro con RLS complejo)
-  const productsWithStock = products?.filter(p => 
-      p.product_colors?.some(c => 
-          c.product_variants?.some(v => v.stock > 0)
-      )
-  ) || [];
-
-  return { props: { products: productsWithStock }, revalidate: 10 };
+  return { props: { products: products || [] }, revalidate: 10 };
 }

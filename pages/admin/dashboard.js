@@ -1,3 +1,4 @@
+// pages/admin/dashboard.js
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/router';
@@ -24,7 +25,7 @@ export default function AdminDashboard() {
         checkUserAndFetchProducts();
     }, [router]);
 
-    // LA CORRECCIÓN CLAVE ESTÁ AQUÍ
+    // --- CONSULTA CORREGIDA ---
     const fetchProducts = async () => {
         setIsLoading(true);
         const { data, error } = await supabase

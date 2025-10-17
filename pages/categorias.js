@@ -7,10 +7,36 @@ import { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
-export default function CategoriasPage({ allProducts }) {
-    // ... (tus useState y useEffect sin cambios) ...
+// Supabase client initialization (outside component)
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-    // --- FUNCIÓN HELPER ACTUALIZADA ---
+export default function CategoriasPage({ allProducts }) {
+    const [selectedCategory, setSelectedCategory] = useState('todos'); // Initialized correctly
+    const [uniqueCategories, setUniqueCategories] = useState([]);
+    const [filteredProducts, setFilteredProducts] = useState(allProducts || []); // Ensure initial state is array
+
+    // Effect to derive unique categories
+    useEffect(() => {
+        if (allProducts && allProducts.length > 0) {
+            const categories = ['todos', ...new Set(allProducts.map(p => p.category).filter(Boolean))];
+            setUniqueCategories(categories);
+        } else {
+            setUniqueCategories(['todos']); // Default if no products
+        }
+    }, [allProducts]);
+
+    // Effect to filter products when category changes
+    useEffect(() => {
+        if (!allProducts) return; // Guard clause
+
+        if (selectedCategory === 'todos') {
+            setFilteredProducts(allProducts);
+        } else {
+            setFilteredProducts(allProducts.filter(p => p.category === selectedCategory));
+        }
+    }, [selectedCategory, allProducts]);
+
+    // Helper function to get the correct product image based on type
     const getProductImage = (product) => {
         switch (product.product_type) {
             case 'SIMPLE':
@@ -18,7 +44,7 @@ export default function CategoriasPage({ allProducts }) {
             case 'VARIANT':
                 return product.product_variants?.[0]?.variant_image_url || '/logo-vidaanimada.png';
             case 'BUNDLE':
-                return '/logo-vidaanimada.png'; // Fallback para bundles
+                return '/logo-vidaanimada.png'; // Fallback for bundles in lists
             default:
                 return '/logo-vidaanimada.png';
         }
@@ -36,26 +62,31 @@ export default function CategoriasPage({ allProducts }) {
                     <h1>Explora Nuestros Productos</h1>
                     <p className="subtitle">Utiliza el filtro para encontrar tus productos favoritos.</p>
                     <div className="filter-container">
-                        <select id="category-filter" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
+                        <select 
+                            id="category-filter" 
+                            value={selectedCategory} 
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                        >
                             {uniqueCategories.map(cat => (
-                                <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
+                                <option key={cat} value={cat}>
+                                    {/* Capitalize first letter */}
+                                    {cat.charAt(0).toUpperCase() + cat.slice(1)} 
+                                </option>
                             ))}
                         </select>
                     </div>
                     <div className="product-grid">
-                        {filteredProducts.map((product) => (
+                        {/* Ensure filteredProducts is always an array before mapping */}
+                        {(filteredProducts || []).map((product) => (
                             <Link href={`/productos/${product.id}`} key={product.id}>
                                 <div className="product-card" style={{ cursor: 'pointer' }}>
                                     {product.tag && <span className="product-tag">{product.tag}</span>}
-
-                                    {/* --- LÍNEA DE IMAGEN CORREGIDA --- */}
-                                    <Image
-                                        src={getProductImage(product)}
-                                        alt={product.name}
-                                        width={300} height={280}
-                                        style={{ objectFit: 'cover' }}
+                                    <Image 
+                                        src={getProductImage(product)} 
+                                        alt={product.name} 
+                                        width={300} height={280} 
+                                        style={{ objectFit: 'cover' }} 
                                     />
-
                                     <h4>{product.name}</h4>
                                     <p className="price">Desde ${product.base_price}</p>
                                 </div>
@@ -69,11 +100,11 @@ export default function CategoriasPage({ allProducts }) {
     );
 }
 
-// --- getStaticProps ACTUALIZADO (para traer product_type) ---
+// --- getStaticProps (CORRECTED, NO COMMENTS IN SELECT) ---
 export async function getStaticProps() {
+    // Re-initialize client inside function scope for server-side execution
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     
-    // --- CONSULTA CORREGIDA (SIN COMENTARIOS) ---
     const { data: allProducts, error } = await supabase
       .from('products')
       .select(`
@@ -83,6 +114,8 @@ export async function getStaticProps() {
 
     if (error) {
         console.error("Error fetching categories products:", error.message);
+        // Return empty array on error to prevent build failure downstream
+        return { props: { allProducts: [] }, revalidate: 60 }; 
     }
 
     return { props: { allProducts: allProducts || [] }, revalidate: 60 };

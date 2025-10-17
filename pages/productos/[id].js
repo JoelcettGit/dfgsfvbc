@@ -225,7 +225,9 @@ export default function ProductPage({ product, recommendedProducts }) {
     };
     // Imagen principal actual
     const mainImageUrl = sliderImages[currentImageIndex]?.url || '/logo-vidaanimada.png';
+    const singleImageLayout = sliderImages.length <= 1;
     const mainImageAlt = sliderImages[currentImageIndex]?.alt || product.name; return (
+        
         <>
             <Head>
                 <title>{product.name} - Vida Animada</title>
@@ -258,13 +260,13 @@ export default function ProductPage({ product, recommendedProducts }) {
                             </div>
                         )}
 
-                        <div className="product-main-image">
+                        <div className="product-main-image" style={singleImageLayout ? { gridColumn: 'span 2' } : {}}>
                             <Image
                                 src={mainImageUrl}
                                 alt={mainImageAlt}
-                                width={800} // Ajusta el ancho según la imagen más grande que tengas
-                                height={900} // Ajusta la altura (debe ser mayor que el thumbnail)
-                                priority={true} // Sugerido para la imagen principal
+                                width={800}
+                                height={900}
+                                priority={true}
                                 style={{ objectFit: 'contain', width: '100%', height: 'auto' }}
                             />
                         </div>
@@ -396,7 +398,6 @@ export default function ProductPage({ product, recommendedProducts }) {
         </>
     );
 }
-
 // --- getStaticPaths ---
 export async function getStaticPaths() {
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);

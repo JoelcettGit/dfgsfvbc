@@ -8,8 +8,6 @@ import { useCart } from '../../context/CartContext';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 
-// Importar Carousel y sus estilos
-import "react-responsive-carousel/lib/styles/carousel.min.css";
 // Cliente Supabase
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 

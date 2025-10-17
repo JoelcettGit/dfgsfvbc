@@ -176,96 +176,101 @@ h2 {
   margin: 1rem 0 2rem;
 }
 
-/* --- Grilla de Productos (Mantener ajustes de paginación/responsive) --- */
+/* --- Grilla de Productos --- */
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Aumentamos minmax ligeramente */
-  gap: 1.5rem; /* Espacio entre cards */
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* Columnas responsivas */
+  gap: 1.8rem;
   margin-top: 2rem;
-  justify-content: center; /* Centrar items en la grilla */
+  justify-content: center;
 }
 
-/* --- NUEVO Diseño de Card de Producto --- */
+/* --- Card de Producto Refinada (Aplicado a .product-card) --- */
 .product-card {
-  position: relative; /* Para posicionar el tag */
+  position: relative; /* Para el tag */
   background: white;
-  border-radius: 8px; /* Bordes más sutiles */
-  overflow: hidden; /* Asegura que la imagen no se salga */
-  text-align: center; /* Centrar texto */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* Sombra más suave */
-  transition: transform 0.3s ease, box-shadow 0.3s ease; /* Transición suave */
-  display: flex; /* Usar flex para controlar contenido interno */
-  flex-direction: column; /* Apilar imagen y texto verticalmente */
-  height: 100%; /* Asegura que todas las cards tengan la misma altura si están en una fila */
-}
-
-/* Efecto Hover */
-.product-card:hover {
-  transform: translateY(-5px); /* Levantar ligeramente */
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12); /* Sombra más pronunciada */
-}
-
-/* Contenedor de la Imagen */
-.product-card-image-container { /* Necesitamos un contenedor extra para el aspect-ratio */
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1 / 1; /* Imagen cuadrada (ajusta si prefieres 4/3, etc.) */
-  overflow: hidden; /* Asegura bordes */
-}
-.product-card-image-container img { /* Estilos para la imagen dentro del contenedor */
-   width: 100%;
-   height: 100%;
-   object-fit: cover; /* Cubre el espacio manteniendo proporción */
-   transition: transform 0.3s ease; /* Transición para zoom */
-}
-.product-card:hover .product-card-image-container img {
-   transform: scale(1.05); /* Ligero zoom al pasar el mouse */
-}
-
-
-/* Contenido de Texto (Nombre y Precio) */
-.product-card-content {
-  padding: 1rem; /* Más espaciado interno */
-  flex-grow: 1; /* Permite que esta sección crezca para alinear cards */
+  border-radius: 12px;
+  overflow: hidden;
+  text-align: left; /* Alineación Izquierda para h4 y price */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   display: flex;
   flex-direction: column;
-  justify-content: space-between; /* Empuja el precio hacia abajo si hay espacio */
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
 
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Contenedor Imagen */
+.product-card-image-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1; /* Imagen cuadrada */
+  overflow: hidden;
+  background-color: #f9f9f9;
+}
+.product-card-image-container img {
+   transition: transform 0.4s ease-out;
+}
+.product-card:hover .product-card-image-container img {
+   transform: scale(1.06);
+}
+
+/* Contenido (Texto + Precio) */
+.product-card-content {
+  padding: 0.8rem 1rem 1rem; /* Padding ajustado (más abajo) */
+  flex-grow: 1; /* Ocupa espacio */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* Separa título y precio */
+}
+
+/* Título (h4) */
 .product-card h4 {
-  font-size: 1rem; /* Tamaño de fuente del nombre */
-  font-weight: 600; /* Un poco más de peso */
-  color: var(--color-dark-text);
-  margin-bottom: 0.5rem; /* Espacio debajo del nombre */
-  /* Limitar a 2 líneas y añadir puntos suspensivos si es muy largo */
+  font-size: 1rem;
+  font-weight: 600;
+  color: #282828;
+  margin: 0 0 0.5rem;
+  line-height: 1.35;
+  /* Limitar a 2 líneas */
   display: -webkit-box;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-height: 2.4em; /* Altura mínima para 2 líneas (ajusta según line-height) */
+  min-height: calc(1.35em * 2);
 }
 
+/* Precio (p.price) */
 .product-card .price {
-  font-size: 1.1rem; /* Precio más grande */
-  font-weight: bold;
-  color: var(--color-pink); /* Color distintivo */
-  margin-top: auto; /* Empuja el precio hacia abajo */
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-dark-text);
+  margin: 0;
+  margin-top: 0.5rem; /* Espacio sobre el precio */
 }
 
-/* Tag (Etiqueta 'Destacado') */
+/* Tag (Destacado) */
 .product-tag {
   position: absolute;
   top: 10px;
-  right: 10px; /* Posición esquina superior derecha */
+  right: 10px;
   background-color: var(--color-pink);
-  color: white; /* Texto blanco para contraste */
-  padding: 4px 10px;
-  border-radius: 4px; /* Bordes menos redondeados */
-  font-size: 0.75rem;
-  font-weight: bold;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
   z-index: 10;
-  line-height: 1.2; /* Ajuste de altura de línea */
+  line-height: 1.2;
 }
+
 /* --- Página de Categorías --- */
 .page-section {
   padding: 4rem 5%;

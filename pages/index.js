@@ -15,7 +15,17 @@ export default function HomePage({ products }) {
       </Head>
       <Header />
       <main>
-        <section id="inicio" className="hero-section">{/* ... */}</section>
+        {/* --- SECCIÓN RESTAURADA --- */}
+        <section id="inicio" className="hero-section">
+            <div className="hero-content">
+                <h1>Animamos tus días con pequeños detalles</h1>
+                <p>Descubre un mundo de color y alegría para ti y tu familia.</p>
+                <Link href="/categorias" className="btn-primary">
+                  Ver Productos
+                </Link>
+            </div>
+        </section>
+
         <section id="productos" className="content-section-alt">
           <h2>Productos Destacados</h2>
           <div className="product-grid">
@@ -45,7 +55,6 @@ export default function HomePage({ products }) {
 export async function getStaticProps() {
   const supabase = createClient( process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY );
   
-  // --- CONSULTA CORREGIDA ---
   const { data: products, error } = await supabase
     .from('products')
     .select(`
@@ -56,7 +65,6 @@ export async function getStaticProps() {
         )
     `)
     .eq('tag', 'Destacado');
-    // Nota: El filtro de stock puede ser complejo con RLS, lo simplificamos por ahora.
 
   if (error) {
     console.error("Error fetching featured products:", error);

@@ -86,13 +86,13 @@ function ProductListView({ products, onAddNew, onEdit, onDelete }) {
             </div>
             <div className="table-container">
                 <table className="products-table">
-                    <thead><tr><th>Nombre</th><th>Categoría</th><th>Colores</th><th>Acciones</th></tr></thead>
+                    <thead><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Acciones</th></tr></thead>
                     <tbody>
                         {products.map(p => (
                             <tr key={p.id}>
                                 <td>{p.name}</td>
                                 <td>{p.category}</td>
-                                <td>{p.basePrice}</td>
+                                <td>{p.base_price}</td>
                                 <td className="variant-actions">
                                     <button onClick={() => onEdit(p)} className="btn-edit">Gestionar</button>
                                     <button onClick={() => onDelete(p.id, p.name)} className="btn-delete">Eliminar</button>

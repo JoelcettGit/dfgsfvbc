@@ -74,23 +74,24 @@ export default function HomePage({ products }) {
 
 // --- getStaticProps ACTUALIZADO (para traer imagen de bundles) ---
 export async function getStaticProps() {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const supabase = createClient( process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY );
 
   const { data: products, error } = await supabase
     .from('products')
     .select(`
-        id, name, base_price, product_type, image_url, tag, 
+        id, name, base_price, product_type, image_url, tag,
         product_variants ( variant_image_url ),
-        bundle_links ( product_variants ( variant_image_url ) ) 
+        bundle_links ( product_variants ( variant_image_url ) )
     `)
-    .eq('tag', 'Destacado')
-    // Opcional: Limitar bundle_links a 1 para optimizar, aunque Supabase es eficiente
-    // .limit(1, { foreignTable: 'bundle_links' }) 
-    ;
+    .eq('tag', 'Destacado');
 
   if (error) {
     console.error("Error fetching featured products:", error.message);
   }
+
+  // --- AÑADIR ESTE LOG ---
+  console.log("Featured Products Data:", JSON.stringify(products, null, 2));
+  // -----------------------
 
   return { props: { products: products || [] }, revalidate: 60 };
 }

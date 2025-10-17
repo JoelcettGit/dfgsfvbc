@@ -105,19 +105,21 @@ export async function getStaticProps() {
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
     const { data: allProducts, error } = await supabase
-        .from('products')
-        .select(`
-          id, name, base_price, product_type, image_url, category, tag, 
+      .from('products')
+      .select(`
+          id, name, base_price, product_type, image_url, category, tag,
           product_variants ( variant_image_url ),
           bundle_links ( product_variants ( variant_image_url ) )
-      `)
-        // .limit(1, { foreignTable: 'bundle_links' }) // Opcional
-        ;
+      `);
 
     if (error) {
         console.error("Error fetching categories products:", error.message);
         return { props: { allProducts: [] }, revalidate: 60 };
     }
+
+    // --- AÑADIR ESTE LOG ---
+    console.log("All Products Data:", JSON.stringify(allProducts, null, 2));
+    // -----------------------
 
     return { props: { allProducts: allProducts || [] }, revalidate: 60 };
 }

@@ -25,6 +25,16 @@ export default function CategoriasPage({ allProducts }) {
         }
     }, [selectedCategory, allProducts]);
 
+    // --- FUNCIÓN HELPER PARA OBTENER LA IMAGEN CORRECTA ---
+    const getProductImage = (product) => {
+        if (product.has_variants) {
+            // Producto Variable: usa la imagen de la primera variante (si existe)
+            return product.product_variants[0]?.variant_image_url || '/logo-vidaanimada.png';
+        }
+        // Producto Simple: usa la imagen principal (si existe)
+        return product.image_url || '/logo-vidaanimada.png';
+    };
+
     return (
         <>
             <Head>
@@ -48,7 +58,15 @@ export default function CategoriasPage({ allProducts }) {
                             <Link href={`/productos/${product.id}`} key={product.id}>
                                 <div className="product-card" style={{ cursor: 'pointer' }}>
                                     {product.tag && <span className="product-tag">{product.tag}</span>}
-                                    <Image src={product.product_colors[0]?.image_url || '/logo-vidaanimada.png'} alt={product.name} width={300} height={280} style={{ objectFit: 'cover' }} />
+                                    
+                                    {/* --- LÍNEA DE IMAGEN CORREGIDA --- */}
+                                    <Image 
+                                        src={getProductImage(product)} 
+                                        alt={product.name} 
+                                        width={300} height={280} 
+                                        style={{ objectFit: 'cover' }} 
+                                    />
+                                    
                                     <h4>{product.name}</h4>
                                     <p className="price">Desde ${product.base_price}</p>
                                 </div>
@@ -63,22 +81,20 @@ export default function CategoriasPage({ allProducts }) {
 }
 
 export async function getStaticProps() {
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    const supabase = createClient(process.env.NEXT_PUBLIC_supabase_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     
     // --- CONSULTA CORREGIDA ---
     const { data: allProducts, error } = await supabase
       .from('products')
       .select(`
-        *,
-        product_colors (
-            *,
-            product_variants (*)
-        )
+          *,
+          product_variants (*)
       `);
 
     if (error) {
-        console.error("Error fetching categories products:", error);
+        console.error("Error fetching categories products:", error.message);
     }
 
-    return { props: { allProducts: allProducts || [] }, revalidate: 10 };
+    // Revalidate 60s (1 minuto) es más razonable que 10s
+    return { props: { allProducts: allProducts || [] }, revalidate: 60 };
 }

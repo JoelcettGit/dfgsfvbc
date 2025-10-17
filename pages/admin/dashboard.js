@@ -7,6 +7,18 @@ import { SketchPicker } from 'react-color';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
+// --- FUNCIÓN DE REVALIDACIÓN AGREGADA ---
+async function revalidateStaticPages() {
+    console.log("Iniciando revalidación...");
+    try {
+        // Asegúrate de tener NEXT_PUBLIC_REVALIDATE_TOKEN en tus variables de Vercel
+        await fetch(`/api/revalidate?secret=${process.env.NEXT_PUBLIC_REVALIDATE_TOKEN}`);
+        console.log("Revalidación solicitada.");
+    } catch (err) {
+        console.error("Error al solicitar la revalidación:", err);
+    }
+}
+
 // --- COMPONENTE PRINCIPAL ---
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
@@ -28,14 +40,12 @@ export default function AdminDashboard() {
     // --- CONSULTA CORREGIDA ---
     const fetchProducts = async () => {
         setIsLoading(true);
+        // AQUÍ ESTABA EL ERROR: 'product_colors' se cambió por 'product_variants'
         const { data, error } = await supabase
             .from('products')
             .select(`
                 *,
-                product_colors (
-                    *,
-                    product_variants (*)
-                )
+                product_variants (*)
             `)
             .order('id', { ascending: false });
 
@@ -43,6 +53,7 @@ export default function AdminDashboard() {
         else setProducts(data || []);
         setIsLoading(false);
     };
+
     const handleDeleteProduct = async (productId, productName) => {
         if (!confirm(`¿Estás seguro de que quieres eliminar "${productName}" y todas sus variantes? Esta acción es permanente.`)) return;
 
@@ -51,7 +62,7 @@ export default function AdminDashboard() {
             alert("Error al eliminar el producto: " + error.message);
         } else {
             alert(`Producto "${productName}" eliminado.`);
-            await revalidateStaticPages();
+            await revalidateStaticPages(); // Función ahora definida
             fetchProducts();
         }
     };
@@ -105,6 +116,7 @@ function ProductListView({ products, onAddNew, onEdit, onDelete }) {
                                 <td>{p.name}</td>
                                 <td>{p.category}</td>
                                 <td>{p.has_variants ? 'Variable' : 'Simple'}</td>
+                                {/* La consulta corregida ahora sí trae 'product_variants' */}
                                 <td>{p.has_variants ? `${p.product_variants.length} variantes` : `${p.stock} u.`}</td>
                                 <td className="variant-actions">
                                     <button onClick={() => onEdit(p)} className="btn-edit">Gestionar</button>
@@ -133,7 +145,7 @@ function ProductFormView({ product, onBack, onSave }) {
     const [simpleImageFile, setSimpleImageFile] = useState(null);
     const [currentImageUrl, setCurrentImageUrl] = useState(product?.image_url || '');
 
-    // ESTA ES LA SECCIÓN DE ESTADOS QUE PROBABLEMENTE FALTABA O ESTABA INCOMPLETA
+    // El estado de variantes ahora funcionará con la consulta corregida
     const [variants, setVariants] = useState(product?.product_variants || []);
     const [newVariantColorName, setNewVariantColorName] = useState('');
     const [newVariantColorHex, setNewVariantColorHex] = useState('#CCCCCC');
@@ -171,7 +183,8 @@ function ProductFormView({ product, onBack, onSave }) {
                 if (error) throw error;
                 currentProductId = data.id;
                 alert("Producto creado.");
-                product = data;
+                // Actualizamos el 'product' local para poder añadir variantes sin recargar
+                product = data; 
             } else {
                 const { error } = await supabase.from('products').update(productData).eq('id', currentProductId);
                 if (error) throw error;
@@ -179,7 +192,7 @@ function ProductFormView({ product, onBack, onSave }) {
             }
 
             await revalidateStaticPages();
-            onSave();
+            onSave(); // Esto llama a fetchProducts() en el padre
 
         } catch (error) {
             console.error("Error detallado:", error);
@@ -191,7 +204,10 @@ function ProductFormView({ product, onBack, onSave }) {
 
     const handleAddVariant = async (e) => {
         e.preventDefault();
-        if (!product) { alert("Guarda primero los datos generales del producto."); return; }
+        if (!product || !product.id) { // Verificamos que el producto exista
+             alert("Guarda primero los datos generales del producto."); 
+             return; 
+        }
 
         let variantImageUrl = null;
         if (newVariantImageFile) {
@@ -208,7 +224,7 @@ function ProductFormView({ product, onBack, onSave }) {
             color_hex: newVariantColorHex || null,
             size: newVariantSize || null,
             stock: parseInt(newVariantStock, 10),
-            variant_image_url: variantImageUrl
+            variant_image_url: variantImageUrl // Columna correcta
         }).select().single();
 
         if (error) { alert("Error al agregar variante: " + error.message); }
@@ -234,10 +250,11 @@ function ProductFormView({ product, onBack, onSave }) {
         setManagingVariant(variant);
     };
 
-    const handleSaveVariantChanges = (updatedVariant) => {
+    const handleSaveVariantChanges = async (updatedVariant) => {
+        // La actualización de BD se hace en el modal
         setVariants(variants.map(v => v.id === updatedVariant.id ? updatedVariant : v));
         setManagingVariant(null);
-        revalidateStaticPages();
+        await revalidateStaticPages(); // Revalidamos al guardar cambios
     };
 
     return (
@@ -309,7 +326,7 @@ function ProductFormView({ product, onBack, onSave }) {
                                 <input type="file" id="newVariantImageFile" accept="image/*" onChange={e => setNewVariantImageFile(e.target.files[0])} />
                                 {newVariantImageFile && <p className="selected-file-name">{newVariantImageFile.name}</p>}
                             </div>
-                            <button type="submit" className="btn-primary">Añadir Variante</button>
+                            <button type="submit" className="btn-primary" disabled={!product.id}>Añadir Variante</button>
                         </form>
                     </div>
                 )}
@@ -332,7 +349,7 @@ function EditVariantModal({ variant, onClose, onSave }) {
     const [colorHex, setColorHex] = useState(variant.color_hex || '#CCCCCC');
     const [displayColorPicker, setDisplayColorPicker] = useState(false);
     const [size, setSize] = useState(variant.size || '');
-    const [stock, setStock] = useState(variant.stock || 0);
+    const [stock, setStock] =useState(variant.stock || 0);
     const [imageFile, setImageFile] = useState(null);
     const [currentImageUrl, setCurrentImageUrl] = useState(variant.variant_image_url || '');
     const [isSaving, setIsSaving] = useState(false);
@@ -360,7 +377,7 @@ function EditVariantModal({ variant, onClose, onSave }) {
             }).eq('id', variant.id).select().single();
 
             if (error) throw error;
-            onSave(data);
+            onSave(data); // Pasa la variante actualizada al padre
 
         } catch (error) {
             alert("Error al actualizar variante: " + error.message);

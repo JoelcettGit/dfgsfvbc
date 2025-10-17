@@ -163,12 +163,16 @@ h2 {
 }
 
 /* --- Grilla y Tarjetas de Producto --- */
+/* CÓDIGO CORREGIDO */
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  /* Cambiamos 1fr (estirar) por 280px (un máximo)
+    Usamos 160px de mínimo para asegurar 2 columnas en móviles (160*2 + gap = 344px)
+  */
+  grid-template-columns: repeat(auto-fit, minmax(160px, 280px));
   gap: 1.5rem;
   margin-top: 2rem;
-  justify-content: center;
+  justify-content: center; /* Esto centrará los items */
 }
 .product-card {
   position: relative;
@@ -178,6 +182,12 @@ h2 {
   text-align: left;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
   transition: transform 0.3s ease;
+}
+.product-card img {
+  width: 100% !important; /* Forzar a que ocupe el 100% de la tarjeta */
+  height: auto !important; /* Dejar que el alto se ajuste */
+  aspect-ratio: 300 / 280; /* Mantiene la proporción original (width/height) */
+  object-fit: cover; /* (Esto ya lo tenías, pero asegura que funcione) */
 }
 .product-card:hover {
   transform: scale(1.03);

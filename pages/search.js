@@ -73,14 +73,14 @@ export async function getServerSideProps(context) {
         return { props: { products: [], searchTerm: '' } };
     }
 
-    const query = searchTerm.trim();
+    // Preparamos el término para websearch_to_tsquery (maneja espacios y operadores simples)
+    const query = searchTerm.trim(); 
 
-    // --- IMPORTANTE: Definir la expresión del tsvector EXACTAMENTE como en el índice ---
-    // Esta cadena debe coincidir con la usada en CREATE INDEX
+    // Definir la expresión tsvector EXACTAMENTE como en el índice GIN
     const ftsVectorExpression = `to_tsvector('spanish', coalesce(name, '') || ' ' || coalesce(description, '') || ' ' || coalesce(category, ''))`;
 
     try {
-        console.log(`Ejecutando textSearch con query: "${query}" sobre: ${ftsVectorExpression}`); // Log para depurar
+        console.log(`Ejecutando FTS filter con query: "${query}"`); // Log
 
         const { data: products, error } = await supabase
             .from('products')
@@ -89,28 +89,26 @@ export async function getServerSideProps(context) {
                 product_variants (variant_image_url),
                 bundle_links (product_variants (variant_image_url))
             `)
-            // --- Usamos textSearch con la expresión correcta ---
-            .textSearch(
-                 ftsVectorExpression, // Pasamos la variable con la expresión exacta
-                 query,
-                 {
-                     config: 'spanish',
-                     // Probamos con 'plain' primero, que es más simple (AND entre términos)
-                     // Si 'plain' no funciona bien para frases, volvemos a 'websearch'
-                     type: 'plain', 
-                     // Opcional: Probar con 'prefix: true' si 'plain' solo busca palabras completas
-                     // plain: true // Esto haría que busque prefijos con el tipo 'plain'
-                 }
+            // --- CAMBIO AQUÍ: Usamos .filter() con @@ y websearch_to_tsquery ---
+            .filter(
+                // La columna/expresión a buscar (nuestra expresión tsvector)
+                // Usamos comillas dobles aquí si la expresión contiene caracteres especiales,
+                // pero en este caso no son estrictamente necesarias. Las quitamos por simplicidad.
+                `(${ftsVectorExpression})`, // Envolvemos la expresión entre paréntesis por claridad
+                // Operador FTS: @@ significa "matches" (coincide con)
+                '@@', 
+                // El valor de búsqueda, convertido a tsquery usando websearch_to_tsquery
+                // websearch_to_tsquery es bueno para input de usuario (maneja AND/OR implícitos)
+                `websearch_to_tsquery('spanish', '${query.replace(/'/g, "''")}')` // Escapamos comillas simples en la query!
             )
             .limit(50);
 
         if (error) {
-            // Si hay error, loguearlo detalladamente
-            console.error("Error detallado de Supabase textSearch:", error);
-            throw new Error(error.message); // Lanza para que el catch lo maneje
+            console.error("Error detallado de Supabase FTS filter:", error);
+            throw new Error(error.message); 
         }
 
-        console.log(`Resultados encontrados para "${query}": ${products?.length || 0}`); // Log de resultados
+        console.log(`Resultados encontrados para "${query}": ${products?.length || 0}`); 
 
         return {
             props: {
@@ -120,9 +118,7 @@ export async function getServerSideProps(context) {
         };
 
     } catch (error) {
-         // Loguea el error formateado
          console.error("Error en getServerSideProps (search.js):", error.message);
-         // Devuelve el error a la página para posible feedback al usuario
          return { props: { products: [], searchTerm, error: `Error al buscar: ${error.message}` } };
     }
 }

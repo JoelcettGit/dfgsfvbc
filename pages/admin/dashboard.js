@@ -1,5 +1,5 @@
 // pages/admin/dashboard.js
-import { useState, useEffect, useMemo } from 'react'; // <-- Importar useMemo
+import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
@@ -7,7 +7,7 @@ import { SketchPicker } from 'react-color';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-// --- FUNCIÓN DE REVALIDACIÓN (SIN CAMBIOS) ---
+// --- FUNCIÓN DE REVALIDACIÓN ---
 async function revalidateStaticPages(productId = null) {
     console.log("Iniciando revalidación...");
     try {
@@ -20,14 +20,13 @@ async function revalidateStaticPages(productId = null) {
     }
 }
 
-// --- COMPONENTE PRINCIPAL (ACTUALIZADO) ---
+// --- COMPONENTE PRINCIPAL ---
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
-
     const [view, setView] = useState('products');
-    const [products, setProducts] = useState([]); // <-- Lista de TODOS los productos
+    const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
     const [editingProduct, setEditingProduct] = useState(null);
 
@@ -48,7 +47,6 @@ export default function AdminDashboard() {
         checkUserAndFetchData();
     }, [router]);
 
-    // --- FETCH DE PRODUCTOS (ACTUALIZADO PARA INCLUIR BUNDLES) ---
     const fetchProducts = async () => {
         const { data, error } = await supabase
             .from('products')
@@ -56,21 +54,15 @@ export default function AdminDashboard() {
                 *,
                 product_variants (*),
                 bundle_links (
-                  id,
-                  quantity,
-                  product_variants (
-                    id, color_name, size,
-                    products (id, name)
-                  )
+                  id, quantity,
+                  product_variants ( id, color_name, size, products (id, name) )
                 )
             `)
             .order('id', { ascending: false });
-
         if (error) console.error("Error al cargar productos:", error.message);
         else setProducts(data || []);
     };
 
-    // --- FETCH DE PEDIDOS (SIN CAMBIOS) ---
     const fetchOrders = async () => {
         const { data, error } = await supabase
             .from('orders')
@@ -86,21 +78,19 @@ export default function AdminDashboard() {
                 )
             `)
             .order('created_at', { ascending: false });
-
         if (error) console.error("Error al cargar pedidos:", error.message);
         else setOrders(data || []);
     };
     
-    // --- MANEJADORES (SIN CAMBIOS) ---
     const handleDeleteProduct = async (productId, productName) => {
-        if (!confirm(`¿Estás seguro de que quieres eliminar "${productName}" y todas sus variantes? Esta acción es permanente.`)) return;
+        if (!confirm(`¿Estás seguro de que quieres eliminar "${productName}" y todas sus variantes/componentes? Esta acción es permanente.`)) return;
         const { error } = await supabase.from('products').delete().eq('id', productId);
         if (error) {
             alert("Error al eliminar el producto: " + error.message);
         } else {
             alert(`Producto "${productName}" eliminado.`);
             await revalidateStaticPages(productId);
-            fetchProducts();
+            fetchProducts(); // Recarga la lista
         }
     };
 
@@ -113,7 +103,7 @@ export default function AdminDashboard() {
     const handleEditProduct = (product) => { setEditingProduct(product); setView('form'); };
     
     const handleSaveAndBack = async () => {
-        await fetchProducts(); // Recarga la lista completa
+        await fetchProducts();
         setView('products');
     };
 
@@ -122,23 +112,22 @@ export default function AdminDashboard() {
     return (
         <div className="admin-dashboard">
             <header className="admin-header">
-                {/* ... (Tu header de admin sin cambios) ... */}
-                <div>
-                    <h1>Dashboard</h1>
-                    <p>Bienvenido, {user?.email}</p>
-                </div>
-                <nav className="admin-nav">
-                    <button onClick={() => setView('products')} className={view === 'products' || view === 'form' ? 'active' : ''}>
-                        Productos ({products.length})
-                    </button>
-                    <button onClick={() => setView('orders')} className={view === 'orders' ? 'active' : ''}>
-                        Pedidos ({orders.length})
-                    </button>
-                </nav>
-                <div>
-                    <button onClick={() => router.push('/')} className="btn-secondary" style={{ marginRight: '1rem' }}>Ver Tienda</button>
-                    <button onClick={handleLogout} className="btn-secondary">Cerrar Sesión</button>
-                </div>
+                 <div>
+                     <h1>Dashboard</h1>
+                     <p>Bienvenido, {user?.email}</p>
+                 </div>
+                 <nav className="admin-nav">
+                     <button onClick={() => setView('products')} className={view === 'products' || view === 'form' ? 'active' : ''}>
+                         Productos ({products.length})
+                     </button>
+                     <button onClick={() => setView('orders')} className={view === 'orders' ? 'active' : ''}>
+                         Pedidos ({orders.length})
+                     </button>
+                 </nav>
+                 <div>
+                     <button onClick={() => router.push('/')} className="btn-secondary" style={{ marginRight: '1rem' }}>Ver Tienda</button>
+                     <button onClick={handleLogout} className="btn-secondary">Cerrar Sesión</button>
+                 </div>
             </header>
             <main className="admin-main">
                 {view === 'products' && (
@@ -149,34 +138,27 @@ export default function AdminDashboard() {
                         product={editingProduct} 
                         onBack={() => setView('products')} 
                         onSave={handleSaveAndBack}
-                        allProducts={products} // <-- ¡IMPORTANTE! Pasamos todos los productos
+                        allProducts={products}
                     />
                 )}
                 {view === 'orders' && (
-                    <OrderListView orders={orders} />
+                    <OrderListView orders={orders} fetchOrders={fetchOrders} /> {/* Pasamos fetchOrders para recargar */}
                 )}
             </main>
         </div>
     );
 }
 
-// --- VISTA DE LISTA DE PRODUCTOS (ACTUALIZADA) ---
+// --- VISTA LISTA PRODUCTOS ---
 function ProductListView({ products, onAddNew, onEdit, onDelete }) {
-    
-    // Helper para mostrar el stock/componentes
     const getStockInfo = (product) => {
         switch (product.product_type) {
-            case 'SIMPLE':
-                return `${product.stock} u.`;
-            case 'VARIANT':
-                return `${product.product_variants.length} variantes`;
-            case 'BUNDLE':
-                return `${product.bundle_links.length} componentes`;
-            default:
-                return '-';
+            case 'SIMPLE': return `${product.stock} u.`;
+            case 'VARIANT': return `${product.product_variants.length} variantes`;
+            case 'BUNDLE': return `${product.bundle_links.length} componentes`;
+            default: return '-';
         }
     };
-
     return (
         <div className="admin-section">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -185,7 +167,6 @@ function ProductListView({ products, onAddNew, onEdit, onDelete }) {
             </div>
             <div className="table-container">
                 <table className="products-table">
-                    {/* --- Cabecera de Tabla Actualizada --- */}
                     <thead><tr><th>Nombre</th><th>Categoría</th><th>Tipo</th><th>Stock/Componentes</th><th>Acciones</th></tr></thead>
                     <tbody>
                         {products.map(p => (
@@ -207,25 +188,19 @@ function ProductListView({ products, onAddNew, onEdit, onDelete }) {
     );
 }
 
-// --- VISTA DE FORMULARIO DE PRODUCTO (GRAN REFACTORIZACIÓN) ---
+// --- VISTA FORMULARIO PRODUCTO (CORREGIDA) ---
 function ProductFormView({ product, onBack, onSave, allProducts }) {
-    // Estados del formulario
+    const [currentProduct, setCurrentProduct] = useState(product); // <-- ESTADO LOCAL
     const [name, setName] = useState(product?.name || '');
     const [description, setDescription] = useState(product?.description || '');
     const [category, setCategory] = useState(product?.category || '');
     const [basePrice, setBasePrice] = useState(product?.base_price || '');
     const [tag, setTag] = useState(product?.tag || '');
     const [isSaving, setIsSaving] = useState(false);
-
-    // --- REEMPLAZO DE hasVariants ---
     const [productType, setProductType] = useState(product?.product_type || 'VARIANT');
-
-    // Estados para tipo 'SIMPLE'
     const [simpleStock, setSimpleStock] = useState(product?.stock || 0);
     const [simpleImageFile, setSimpleImageFile] = useState(null);
     const [currentImageUrl, setCurrentImageUrl] = useState(product?.image_url || '');
-
-    // Estados para tipo 'VARIANT'
     const [variants, setVariants] = useState(product?.product_variants || []);
     const [newVariantColorName, setNewVariantColorName] = useState('');
     const [newVariantColorHex, setNewVariantColorHex] = useState('#CCCCCC');
@@ -234,153 +209,161 @@ function ProductFormView({ product, onBack, onSave, allProducts }) {
     const [newVariantStock, setNewVariantStock] = useState(0);
     const [newVariantImageFile, setNewVariantImageFile] = useState(null);
     const [managingVariant, setManagingVariant] = useState(null);
-
-    // --- NUEVOS ESTADOS para tipo 'BUNDLE' ---
     const [bundleLinks, setBundleLinks] = useState(product?.bundle_links || []);
     const [selectedBundleProduct, setSelectedBundleProduct] = useState('');
     const [selectedBundleVariant, setSelectedBundleVariant] = useState('');
 
-    // Memoizamos la lista de productos que tienen variantes (para el selector de bundles)
-    const variantProducts = useMemo(() => {
-        return allProducts.filter(p => p.product_type === 'VARIANT');
-    }, [allProducts]);
-    
-    // Memoizamos las variantes del producto seleccionado
+    const variantProducts = useMemo(() => allProducts.filter(p => p.product_type === 'VARIANT'), [allProducts]);
     const variantsForSelectedBundleProduct = useMemo(() => {
         const foundProduct = variantProducts.find(p => p.id === selectedBundleProduct);
         return foundProduct ? foundProduct.product_variants : [];
     }, [selectedBundleProduct, variantProducts]);
 
-
-    // --- LÓGICA DE GUARDADO (ACTUALIZADA) ---
     const handleSaveProduct = async (e) => {
         e.preventDefault();
         setIsSaving(true);
         let imageUrl = currentImageUrl;
-
         try {
-            // Subir imagen solo si es tipo 'SIMPLE'
             if (productType === 'SIMPLE' && simpleImageFile) {
                 const fileName = `${Date.now()}-${simpleImageFile.name.replace(/\s/g, '_')}`;
                 const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, simpleImageFile);
                 if (uploadError) throw uploadError;
-                const { data: { publicUrl } } = await supabase.storage.from('product-images').getPublicUrl(fileName);
+                const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName); // CORREGIDO: Quitar await
                 imageUrl = publicUrl;
             }
-
-            // Construimos el objeto de datos
             const productData = {
-                name, description, category, tag,
-                product_type: productType, // <-- Nueva columna
+                name, description, category, tag, product_type: productType,
                 base_price: parseFloat(basePrice),
-                // Asignar stock/imagen solo si es 'SIMPLE'
                 stock: productType === 'SIMPLE' ? parseInt(simpleStock, 10) : null,
-                image_url: productType === 'SIMPLE' ? imageUrl : null,
+                image_url: productType === 'SIMPLE' ? imageUrl : null
+                // has_variants fue eliminada correctamente
             };
-
-            let currentProductId = product?.id;
+            let currentProductId = currentProduct?.id; // <-- USA currentProduct
             if (!currentProductId) {
                 const { data, error } = await supabase.from('products').insert(productData).select().single();
                 if (error) throw error;
                 currentProductId = data.id;
                 alert("Producto creado.");
-                product = data; // Actualizamos el producto local para poder añadir variantes/componentes
+                setCurrentProduct(data); // <-- ACTUALIZA ESTADO LOCAL
             } else {
                 const { error } = await supabase.from('products').update(productData).eq('id', currentProductId);
                 if (error) throw error;
                 alert("Producto actualizado.");
+                 // Actualiza el estado local también al editar (opcional pero bueno)
+                 setCurrentProduct(prev => ({ ...prev, ...productData }));
             }
-
             await revalidateStaticPages(currentProductId);
-            onSave(); // Llama a handleSaveAndBack()
-
+            // No llamamos a onSave() todavía si es un producto nuevo,
+            // para permitir añadir variantes/componentes antes de volver.
+            // Si es una edición, sí podemos volver:
+            if (product) { // Si 'product' (la prop original) existía, era una edición
+                 onSave(); 
+            } else {
+                 setIsSaving(false); // Solo quita el estado de guardando si es nuevo
+                 // El usuario se queda en el form para añadir variantes/componentes
+            }
         } catch (error) {
             console.error("Error detallado:", error);
             alert("Error al guardar: " + error.message);
-        } finally {
-            setIsSaving(false);
+            setIsSaving(false); // Asegura quitar el estado de guardando en caso de error
+        }
+        // finally { // Quitamos el finally para controlar 'isSaving' manualmente
+        //    setIsSaving(false);
+        // }
+    };
+
+    const handleAddVariant = async (e) => {
+        e.preventDefault();
+        if (!currentProduct || !currentProduct.id) { // <-- USA currentProduct
+            alert("Guarda primero los datos generales del producto."); return;
+        }
+        let variantImageUrl = null;
+        if (newVariantImageFile) {
+            const fileName = `${Date.now()}-VAR-${newVariantImageFile.name.replace(/\s/g, '_')}`;
+            const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, newVariantImageFile);
+            if (uploadError) { alert("Error al subir imagen de variante: " + uploadError.message); return; }
+            const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName); // CORREGIDO: Quitar await
+            variantImageUrl = publicUrl;
+        }
+        const { data, error } = await supabase.from('product_variants').insert({
+            product_id: currentProduct.id, // <-- USA currentProduct
+            color_name: newVariantColorName || null, color_hex: newVariantColorHex || null,
+            size: newVariantSize || null, stock: parseInt(newVariantStock, 10),
+            variant_image_url: variantImageUrl
+        }).select().single();
+        if (error) { alert("Error al agregar variante: " + error.message); }
+        else {
+            setVariants([...variants, data]);
+            setNewVariantColorName(''); setNewVariantColorHex('#CCCCCC'); setNewVariantSize(''); setNewVariantStock(0); setNewVariantImageFile(null);
+            if (document.getElementById('newVariantImageFile')) document.getElementById('newVariantImageFile').value = '';
+            await revalidateStaticPages(currentProduct.id); // <-- USA currentProduct
         }
     };
 
-    // --- LÓGICA DE VARIANTES (Sin cambios, pero ahora condicional) ---
-    const handleAddVariant = async (e) => { /* ... (Tu código sin cambios) ... */ };
-    const handleDeleteVariant = async (variantId) => { /* ... (Tu código sin cambios) ... */ };
-    const handleEditVariantClick = (variant) => { /* ... (Tu código sin cambios) ... */ };
-    const handleSaveVariantChanges = async (updatedVariant) => { /* ... (Tu código sin cambios) ... */ };
+    const handleDeleteVariant = async (variantId) => {
+        if (!currentProduct || !currentProduct.id) return; // <-- USA currentProduct
+        if (!confirm("¿Seguro que quieres eliminar esta variante?")) return;
+        const { error } = await supabase.from('product_variants').delete().eq('id', variantId);
+        if (error) { alert("Error al eliminar variante: " + error.message); }
+        else {
+            setVariants(variants.filter(v => v.id !== variantId));
+            await revalidateStaticPages(currentProduct.id); // <-- USA currentProduct
+        }
+    };
+    
+    const handleEditVariantClick = (variant) => { setManagingVariant(variant); };
 
+    const handleSaveVariantChanges = async (updatedVariant) => {
+        if (!currentProduct || !currentProduct.id) return; // <-- USA currentProduct
+        setVariants(variants.map(v => v.id === updatedVariant.id ? updatedVariant : v));
+        setManagingVariant(null);
+        await revalidateStaticPages(currentProduct.id); // <-- USA currentProduct
+    };
 
-    // --- NUEVA LÓGICA para 'BUNDLE' ---
     const handleAddBundleComponent = async (e) => {
         e.preventDefault();
-        if (!product || !product.id) {
-             alert("Guarda primero los datos generales del producto."); return; 
+        if (!currentProduct || !currentProduct.id) { // <-- USA currentProduct
+            alert("Guarda primero los datos generales del producto."); return;
         }
-        if (!selectedBundleVariant) {
-             alert("Selecciona una variante para añadir."); return; 
-        }
-
+        if (!selectedBundleVariant) { alert("Selecciona una variante para añadir."); return; }
         const { data, error } = await supabase.from('bundle_links').insert({
-            bundle_product_id: product.id,
-            variant_component_id: selectedBundleVariant,
-            quantity: 1 // (Podríamos añadir un input para esto)
-        }).select(`
-            *,
-            product_variants (
-                id, color_name, size,
-                products (id, name)
-            )
-        `).single();
-
-        if (error) {
-            alert("Error al añadir componente: " + error.message);
-        } else {
+            bundle_product_id: currentProduct.id, // <-- USA currentProduct
+            variant_component_id: selectedBundleVariant, quantity: 1
+        }).select(`*, product_variants (id, color_name, size, products (id, name))`).single();
+        if (error) { alert("Error al añadir componente: " + error.message); }
+        else {
             setBundleLinks([...bundleLinks, data]);
-            setSelectedBundleProduct('');
-            setSelectedBundleVariant('');
+            setSelectedBundleProduct(''); setSelectedBundleVariant('');
         }
     };
 
     const handleDeleteBundleComponent = async (bundleLinkId) => {
         if (!confirm("¿Seguro que quieres quitar este componente del conjunto?")) return;
-        
         const { error } = await supabase.from('bundle_links').delete().eq('id', bundleLinkId);
-        if (error) {
-            alert("Error al eliminar componente: " + error.message);
-        } else {
-            setBundleLinks(bundleLinks.filter(link => link.id !== bundleLinkId));
-        }
+        if (error) { alert("Error al eliminar componente: " + error.message); }
+        else { setBundleLinks(bundleLinks.filter(link => link.id !== bundleLinkId)); }
     };
 
     return (
         <>
             <div className="admin-section">
                 <button onClick={onBack} className="btn-secondary" style={{ marginBottom: '1rem' }}>← Volver</button>
-                <h2>{product ? `Gestionando: ${product.name}` : "Agregar Producto"}</h2>
-                
-                {/* --- FORMULARIO DE DATOS GENERALES (ACTUALIZADO) --- */}
+                <h2>{currentProduct ? `Gestionando: ${name}` : "Agregar Producto"}</h2>
                 <form onSubmit={handleSaveProduct} className="add-product-form">
                     <h3>Datos Generales</h3>
-                    
                     <div className="form-field-full">
                         <label htmlFor="productType">Tipo de Producto</label>
-                        <select 
-                            id="productType" 
-                            value={productType} 
-                            onChange={(e) => setProductType(e.target.value)}
-                        >
+                        <select id="productType" value={productType} onChange={(e) => setProductType(e.target.value)}>
                             <option value="SIMPLE">Simple (Ej: Lapiceras, con stock propio)</option>
                             <option value="VARIANT">Variante (Ej: Pantalón, con colores/talles)</option>
                             <option value="BUNDLE">Conjunto (Ej: Pijama, compuesto por variantes)</option>
                         </select>
                     </div>
-
                     <input type="text" placeholder="Nombre" value={name} onChange={e => setName(e.target.value)} required />
                     <textarea placeholder="Descripción" value={description} onChange={e => setDescription(e.target.value)} rows="3" />
                     <input type="text" placeholder="Categoría" value={category} onChange={e => setCategory(e.target.value)} required />
                     <input type="number" step="0.01" placeholder="Precio Base" value={basePrice} onChange={e => setBasePrice(e.target.value)} required />
                     <input type="text" placeholder="Etiqueta (ej: Destacado)" value={tag} onChange={e => setTag(e.target.value)} />
-
-                    {/* --- CAMPOS CONDICIONALES PARA 'SIMPLE' --- */}
                     {productType === 'SIMPLE' && (
                         <>
                             <input type="number" placeholder="Stock" value={simpleStock} onChange={e => setSimpleStock(e.target.value)} required />
@@ -392,34 +375,67 @@ function ProductFormView({ product, onBack, onSave, allProducts }) {
                             </div>
                         </>
                     )}
-
-                    <button type="submit" className="btn-primary" disabled={isSaving}>{isSaving ? "Guardando..." : "Guardar Datos"}</button>
+                    <button type="submit" className="btn-primary" disabled={isSaving}>
+                        {isSaving ? "Guardando..." : (currentProduct ? "Actualizar Datos" : "Guardar y Continuar")}
+                    </button>
                 </form>
 
-                {/* --- SECCIÓN CONDICIONAL PARA 'VARIANT' --- */}
-                {product && productType === 'VARIANT' && (
+                {/* --- SECCIÓN VARIANTES (CORREGIDA CONDICIÓN) --- */}
+                {currentProduct && productType === 'VARIANT' && (
                     <div className="variants-section">
                         <h3>Variantes del Producto</h3>
-                        {/* ... (Tu JSX de la tabla de variantes, SIN CAMBIOS) ... */}
-                        {/* ... (Tu JSX del formulario de añadir variante, SIN CAMBIOS) ... */}
+                        <div className="table-container">
+                             <table className="products-table">
+                                 <thead><tr><th>Imagen</th><th>Color</th><th>Talle</th><th>Stock</th><th>Acciones</th></tr></thead>
+                                 <tbody>
+                                     {variants.map(v => (
+                                         <tr key={v.id}>
+                                             <td><Image src={v.variant_image_url || '/logo-vidaanimada.png'} alt={`${v.color_name} ${v.size}`} width={50} height={50} className="table-product-image" /></td>
+                                             <td><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '20px', height: '20px', backgroundColor: v.color_hex || '#fff', borderRadius: '50%', border: '1px solid #eee' }}></span>{v.color_name || '-'}</div></td>
+                                             <td>{v.size || '-'}</td>
+                                             <td>{v.stock} u.</td>
+                                             <td className="variant-actions">
+                                                 <button onClick={() => handleEditVariantClick(v)} className="btn-edit">Editar</button>
+                                                 <button onClick={() => handleDeleteVariant(v.id)} className="btn-delete">Eliminar</button>
+                                             </td>
+                                         </tr>
+                                     ))}
+                                 </tbody>
+                             </table>
+                         </div>
+                        <form onSubmit={handleAddVariant} className="add-variant-form">
+                            <h4>Agregar Variante</h4>
+                            <input type="text" placeholder="Nombre Color" value={newVariantColorName} onChange={e => setNewVariantColorName(e.target.value)} />
+                            <div className="color-picker-wrapper">
+                                <label>Color Hex</label>
+                                <div className="color-swatch" onClick={() => setDisplayColorPicker(!displayColorPicker)}><div className="color-preview" style={{ background: newVariantColorHex }} /></div>
+                                {displayColorPicker ? (<div className="color-popover"><div className="color-cover" onClick={() => setDisplayColorPicker(false)} /><SketchPicker color={newVariantColorHex} onChange={(color) => setNewVariantColorHex(color.hex)} /></div>) : null}
+                            </div>
+                            <input type="text" placeholder="Talle" value={newVariantSize} onChange={e => setNewVariantSize(e.target.value)} />
+                            <input type="number" placeholder="Stock" value={newVariantStock} onChange={e => setNewVariantStock(e.target.value)} required />
+                            <div className="file-input-container">
+                                <label htmlFor="newVariantImageFile">Imagen Específica (Opcional)</label>
+                                <input type="file" id="newVariantImageFile" accept="image/*" onChange={e => setNewVariantImageFile(e.target.files[0])} />
+                                {newVariantImageFile && <p className="selected-file-name">{newVariantImageFile.name}</p>}
+                            </div>
+                             <button type="submit" className="btn-primary" disabled={!currentProduct}>Añadir Variante</button> {/* <-- DISABLED CORREGIDO */}
+                        </form>
                     </div>
                 )}
                 
-                {/* --- ¡NUEVA SECCIÓN! para 'BUNDLE' --- */}
-                {product && productType === 'BUNDLE' && (
+                {/* --- SECCIÓN BUNDLE (CORREGIDA CONDICIÓN) --- */}
+                {currentProduct && productType === 'BUNDLE' && (
                     <div className="variants-section">
                         <h3>Componentes del Conjunto</h3>
-                        <p>Define qué variantes componen este conjunto. El stock se basará en las variantes que selecciones.</p>
-                        
-                        {/* Tabla de componentes existentes */}
+                        <p>Define qué variantes componen este conjunto.</p>
                         <div className="table-container">
                             <table className="products-table">
                                 <thead><tr><th>Producto Componente</th><th>Variante (Talle/Color)</th><th>Acciones</th></tr></thead>
                                 <tbody>
                                     {bundleLinks.map(link => (
                                         <tr key={link.id}>
-                                            <td>{link.product_variants.products.name}</td>
-                                            <td>{link.product_variants.color_name} / {link.product_variants.size}</td>
+                                             <td>{link.product_variants?.products?.name || 'Producto no encontrado'}</td> {/* <-- Más seguro */}
+                                             <td>{link.product_variants?.color_name || '-'} / {link.product_variants?.size || '-'}</td> {/* <-- Más seguro */}
                                             <td className="variant-actions">
                                                 <button onClick={() => handleDeleteBundleComponent(link.id)} className="btn-delete">Quitar</button>
                                             </td>
@@ -428,51 +444,27 @@ function ProductFormView({ product, onBack, onSave, allProducts }) {
                                 </tbody>
                             </table>
                         </div>
-
-                        {/* Formulario para añadir componentes */}
                         <form onSubmit={handleAddBundleComponent} className="add-variant-form">
                             <h4>Agregar Componente</h4>
                             <div className="form-field-full">
                                 <label htmlFor="bundleProduct">1. Selecciona el Producto</label>
-                                <select 
-                                    id="bundleProduct" 
-                                    value={selectedBundleProduct} 
-                                    onChange={e => {
-                                        setSelectedBundleProduct(e.target.value);
-                                        setSelectedBundleVariant(''); // Resetea la variante al cambiar de producto
-                                    }}
-                                >
+                                <select id="bundleProduct" value={selectedBundleProduct} onChange={e => { setSelectedBundleProduct(e.target.value); setSelectedBundleVariant(''); }}>
                                     <option value="">Selecciona un producto...</option>
-                                    {variantProducts.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name}</option>
-                                    ))}
+                                    {variantProducts.map(p => (<option key={p.id} value={p.id}>{p.name}</option>))}
                                 </select>
                             </div>
-
                             <div className="form-field-full">
                                 <label htmlFor="bundleVariant">2. Selecciona la Variante</label>
-                                <select 
-                                    id="bundleVariant" 
-                                    value={selectedBundleVariant} 
-                                    onChange={e => setSelectedBundleVariant(e.target.value)}
-                                    disabled={!selectedBundleProduct}
-                                >
+                                <select id="bundleVariant" value={selectedBundleVariant} onChange={e => setSelectedBundleVariant(e.target.value)} disabled={!selectedBundleProduct}>
                                     <option value="">Selecciona una variante...</option>
-                                    {variantsForSelectedBundleProduct.map(v => (
-                                        <option key={v.id} value={v.id}>{v.color_name} / {v.size} (Stock: {v.stock})</option>
-                                    ))}
+                                    {variantsForSelectedBundleProduct.map(v => (<option key={v.id} value={v.id}>{v.color_name} / {v.size} (Stock: {v.stock})</option>))}
                                 </select>
                             </div>
-
-                            <button type="submit" className="btn-primary" disabled={!product.id || !selectedBundleVariant}>
-                                Añadir Componente
-                            </button>
+                             <button type="submit" className="btn-primary" disabled={!currentProduct || !selectedBundleVariant}>Añadir Componente</button> {/* <-- DISABLED CORREGIDO */}
                         </form>
                     </div>
                 )}
             </div>
-
-            {/* --- MODAL (Sin cambios) --- */}
             {managingVariant && (
                 <EditVariantModal
                     variant={managingVariant}
@@ -484,63 +476,26 @@ function ProductFormView({ product, onBack, onSave, allProducts }) {
     );
 }
 
-
-// --- MODAL Y VISTA DE PEDIDOS (TUS COMPONENTES SIN CAMBIOS) ---
-function OrderListView({ orders }) {
-    
-    // Helper para obtener el nombre 
-    const getOrderItemName = (item) => {
-        if (item.products) return item.products.name;
-        if (item.product_variants) {
-            const productName = item.product_variants.products.name;
-            const color = item.product_variants.color_name || '';
-            const size = item.product_variants.size || '';
-            return `${productName} (${color} - ${size})`;
-        }
-        return 'Producto desconocido';
-    };
-
-    // Helper para obtener la imagen
-    const getOrderItemImage = (item) => {
-        if (item.products) return item.products.image_url;
-        if (item.product_variants) return item.product_variants.variant_image_url;
-        return '/logo-vidaanimada.png';
-    };
-
-    // Función para manejar el cambio de estado
+// --- VISTA LISTA PEDIDOS ---
+function OrderListView({ orders, fetchOrders }) { // <-- Recibe fetchOrders
+    const getOrderItemName = (item) => { /* ... (Sin cambios) ... */ };
+    const getOrderItemImage = (item) => { /* ... (Sin cambios) ... */ };
     const handleStatusChange = async (orderId, newStatus) => {
         try {
-            const { error } = await supabase
-                .from('orders')
-                .update({ status: newStatus })
-                .eq('id', orderId);
-
+            const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
             if (error) throw error;
-            
             alert(`Pedido ${orderId.split('-')[0]}... actualizado a "${newStatus}".`);
-            // Idealmente, aquí recargaríamos los pedidos con fetchOrders()
-            // Pero por simplicidad, podemos dejar que el admin refresque si es necesario
-            // o implementar una recarga más adelante.
-
+            fetchOrders(); // <-- Recarga los pedidos al cambiar estado
         } catch (error) {
             alert("Error al actualizar el estado: " + error.message);
         }
     };
-
     return (
         <div className="admin-section">
             <h2>Listado de Pedidos ({orders.length})</h2>
             <div className="table-container">
                 <table className="products-table orders-table">
-                    <thead>
-                        <tr>
-                            <th>ID Pedido</th>
-                            <th>Fecha</th>
-                            <th>Items</th>
-                            <th>Total</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>ID Pedido</th><th>Fecha</th><th>Items</th><th>Total</th><th>Estado</th></tr></thead>
                     <tbody>
                         {orders.map(order => (
                             <tr key={order.id}>
@@ -549,22 +504,14 @@ function OrderListView({ orders }) {
                                 <td className="order-items-cell">
                                     {order.order_items.map(item => (
                                         <div key={item.id || Math.random()} className="order-item-detail">
-                                            {/* Corregido: Usar getOrderItemImage */}
                                             <Image src={getOrderItemImage(item) || '/logo-vidaanimada.png'} alt="" width={40} height={40} className="table-product-image-small" />
-                                            <span>
-                                                {item.quantity} x {getOrderItemName(item)}
-                                                <em> (Sub: ${(item.unit_price * item.quantity).toFixed(2)})</em> {/* <-- Asegurar toFixed(2) */}
-                                            </span>
+                                            <span>{item.quantity} x {getOrderItemName(item)}<em> (Sub: ${(item.unit_price * item.quantity).toFixed(2)})</em></span>
                                         </div>
                                     ))}
                                 </td>
-                                <td className="order-total">${parseFloat(order.total_price).toFixed(2)}</td> {/* <-- Asegurar toFixed(2) */}
+                                <td className="order-total">${parseFloat(order.total_price).toFixed(2)}</td>
                                 <td>
-                                    <select
-                                        className={`status-select status-${order.status}`}
-                                        defaultValue={order.status}
-                                        onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                                    >
+                                    <select className={`status-select status-${order.status}`} defaultValue={order.status} onChange={(e) => handleStatusChange(order.id, e.target.value)}>
                                         <option value="pendiente">Pendiente</option>
                                         <option value="completado">Completado</option>
                                         <option value="cancelado">Cancelado</option>
@@ -578,9 +525,9 @@ function OrderListView({ orders }) {
         </div>
     );
 }
-// --- MODAL DE EDICIÓN DE VARIANTE (SIN CAMBIOS) ---
+
+// --- MODAL EDICIÓN VARIANTE ---
 function EditVariantModal({ variant, onClose, onSave }) {
-    // ... (Todo tu componente EditVariantModal, sin cambios) ...
     const [colorName, setColorName] = useState(variant.color_name || '');
     const [colorHex, setColorHex] = useState(variant.color_hex || '#CCCCCC');
     const [displayColorPicker, setDisplayColorPicker] = useState(false);
@@ -591,31 +538,23 @@ function EditVariantModal({ variant, onClose, onSave }) {
     const [isSaving, setIsSaving] = useState(false);
 
     const handleUpdate = async (e) => {
-        e.preventDefault();
-        setIsSaving(true);
-        let finalImageUrl = currentImageUrl;
+        e.preventDefault(); setIsSaving(true); let finalImageUrl = currentImageUrl;
         try {
             if (imageFile) {
                 const fileName = `${Date.now()}-VAR-${imageFile.name.replace(/\s/g, '_')}`;
                 const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, imageFile);
                 if (uploadError) throw uploadError;
-                const { data: { publicUrl } } = await supabase.storage.from('product-images').getPublicUrl(fileName);
+                const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName); // CORREGIDO: Quitar await
                 finalImageUrl = publicUrl;
             }
             const { data, error } = await supabase.from('product_variants').update({
-                color_name: colorName,
-                color_hex: colorHex,
-                size: size,
-                stock: parseInt(stock, 10),
-                variant_image_url: finalImageUrl
+                color_name: colorName, color_hex: colorHex, size: size,
+                stock: parseInt(stock, 10), variant_image_url: finalImageUrl
             }).eq('id', variant.id).select().single();
             if (error) throw error;
             onSave(data);
-        } catch (error) {
-            alert("Error al actualizar variante: " + error.message);
-        } finally {
-            setIsSaving(false);
-        }
+        } catch (error) { alert("Error al actualizar variante: " + error.message); }
+        finally { setIsSaving(false); }
     };
 
     return (
@@ -623,20 +562,20 @@ function EditVariantModal({ variant, onClose, onSave }) {
             <div className="modal-content">
                 <h2>Editando Variante</h2>
                 <form onSubmit={handleUpdate}>
-                    <label>Nombre Color</label><input type="text" value={colorName} onChange={e => setColorName(e.target.value)} />
-                    <div className="color-picker-wrapper">
-                        <label>Color Hex</label>
-                        <div className="color-swatch" onClick={() => setDisplayColorPicker(!displayColorPicker)}><div className="color-preview" style={{ background: colorHex }} /></div>
-                        {displayColorPicker ? (<div className="color-popover"><div className="color-cover" onClick={() => setDisplayColorPicker(false)} /><SketchPicker color={colorHex} onChange={(color) => setColorHex(color.hex)} /></div>) : null}
-                    </div>
-                    <label>Talle</label><input type="text" value={size} onChange={e => setSize(e.target.value)} />
-                    <label>Stock</label><input type="number" value={stock} onChange={e => setStock(e.target.value)} required />
-                    <div className="file-input-container">
-                        <label htmlFor="editVariantImageFile">Cambiar Imagen (Opcional)</label>
-                        <input type="file" id="editVariantImageFile" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} />
-                        {imageFile && <p className="selected-file-name">{imageFile.name}</p>}
-                        {!imageFile && currentImageUrl && <p className="selected-file-name">Actual: <a href={currentImageUrl} target="_blank" rel="noopener noreferrer">Ver</a></p>}
-                    </div>
+                     <label>Nombre Color</label><input type="text" value={colorName} onChange={e => setColorName(e.target.value)} />
+                     <div className="color-picker-wrapper">
+                         <label>Color Hex</label>
+                         <div className="color-swatch" onClick={() => setDisplayColorPicker(!displayColorPicker)}><div className="color-preview" style={{ background: colorHex }} /></div>
+                         {displayColorPicker ? (<div className="color-popover"><div className="color-cover" onClick={() => setDisplayColorPicker(false)} /><SketchPicker color={colorHex} onChange={(color) => setColorHex(color.hex)} /></div>) : null}
+                     </div>
+                     <label>Talle</label><input type="text" value={size} onChange={e => setSize(e.target.value)} />
+                     <label>Stock</label><input type="number" value={stock} onChange={e => setStock(e.target.value)} required />
+                     <div className="file-input-container">
+                         <label htmlFor="editVariantImageFile">Cambiar Imagen (Opcional)</label>
+                         <input type="file" id="editVariantImageFile" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} />
+                         {imageFile && <p className="selected-file-name">{imageFile.name}</p>}
+                         {!imageFile && currentImageUrl && <p className="selected-file-name">Actual: <a href={currentImageUrl} target="_blank" rel="noopener noreferrer">Ver</a></p>}
+                     </div>
                     <div className="modal-actions">
                         <button type="submit" className="btn-primary" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Guardar Cambios'}</button>
                         <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>

@@ -65,7 +65,6 @@ export default function SearchPage({ products, searchTerm }) {
     );
 }
 
-// --- getServerSideProps (ACTUALIZADO con .textSearch()) ---
 export async function getServerSideProps(context) {
     const searchTerm = context.query.q || '';
 
@@ -73,15 +72,10 @@ export async function getServerSideProps(context) {
         return { props: { products: [], searchTerm: '' } };
     }
 
-    // Preparamos el término para websearch_to_tsquery (maneja espacios y operadores simples)
-    const query = searchTerm.trim(); 
-
-    // Definir la expresión tsvector EXACTAMENTE como en el índice GIN
-    const ftsVectorExpression = `to_tsvector('spanish', coalesce(name, '') || ' ' || coalesce(description, '') || ' ' || coalesce(category, ''))`;
+    // Prepara el término para búsqueda 'ilike' (case-insensitive, partial match)
+    const searchQuery = `%${searchTerm.trim()}%`;
 
     try {
-        console.log(`Ejecutando FTS filter con query: "${query}"`); // Log
-
         const { data: products, error } = await supabase
             .from('products')
             .select(`
@@ -89,36 +83,25 @@ export async function getServerSideProps(context) {
                 product_variants (variant_image_url),
                 bundle_links (product_variants (variant_image_url))
             `)
-            // --- CAMBIO AQUÍ: Usamos .filter() con @@ y websearch_to_tsquery ---
-            .filter(
-                // La columna/expresión a buscar (nuestra expresión tsvector)
-                // Usamos comillas dobles aquí si la expresión contiene caracteres especiales,
-                // pero en este caso no son estrictamente necesarias. Las quitamos por simplicidad.
-                `(${ftsVectorExpression})`, // Envolvemos la expresión entre paréntesis por claridad
-                // Operador FTS: @@ significa "matches" (coincide con)
-                '@@', 
-                // El valor de búsqueda, convertido a tsquery usando websearch_to_tsquery
-                // websearch_to_tsquery es bueno para input de usuario (maneja AND/OR implícitos)
-                `websearch_to_tsquery('spanish', '${query.replace(/'/g, "''")}')` // Escapamos comillas simples en la query!
-            )
-            .limit(50);
+            // --- Usa .or() para buscar en name, description, O category ---
+            .or(`name.ilike.${searchQuery},description.ilike.${searchQuery},category.ilike.${searchQuery}`)
+            .limit(50); // Mantiene el límite
 
         if (error) {
-            console.error("Error detallado de Supabase FTS filter:", error);
-            throw new Error(error.message); 
+            // Manejo de errores estándar
+            console.error("Error fetching search results (ilike):", error.message);
+            throw new Error(error.message);
         }
-
-        console.log(`Resultados encontrados para "${query}": ${products?.length || 0}`); 
 
         return {
             props: {
                 products: products || [],
-                searchTerm,
+                searchTerm: searchTerm.trim(), // Pasa el término limpio
             },
         };
 
     } catch (error) {
-         console.error("Error en getServerSideProps (search.js):", error.message);
-         return { props: { products: [], searchTerm, error: `Error al buscar: ${error.message}` } };
+         console.error("Error en getServerSideProps (search.js - ilike):", error.message);
+         return { props: { products: [], searchTerm: searchTerm.trim(), error: `Error al buscar.` } }; // Mensaje de error genérico
     }
 }

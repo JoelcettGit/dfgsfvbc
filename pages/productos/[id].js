@@ -11,12 +11,12 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.
 
 export default function ProductPage({ product }) {
     const { addToCart } = useCart();
-    
+
     const [selectedColor, setSelectedColor] = useState(null);
     const [selectedSize, setSelectedSize] = useState(null);
 
     const availableColors = useMemo(() => product.product_colors || [], [product.product_colors]);
-    
+
     const availableSizes = useMemo(() => {
         const color = availableColors.find(c => c.id === selectedColor?.id);
         return color?.product_variants || [];
@@ -27,7 +27,7 @@ export default function ProductPage({ product }) {
             setSelectedColor(availableColors[0]);
         }
     }, [availableColors, selectedColor]);
-    
+
     useEffect(() => {
         if (availableSizes.length > 0) {
             setSelectedSize(availableSizes[0]);
@@ -55,7 +55,7 @@ export default function ProductPage({ product }) {
             alert("Selección no disponible o sin stock.");
         }
     };
-    
+
     if (!product) return <div>Cargando...</div>;
 
     return (
@@ -66,8 +66,8 @@ export default function ProductPage({ product }) {
                 <section className="page-section">
                     <div className="product-detail-layout">
                         <div className="product-image-section">
-                            <Image 
-                                src={selectedColor?.image_url || '/logo-vidaanimada.png'} 
+                            <Image
+                                src={selectedColor?.image_url || '/logo-vidaanimada.png'}
                                 alt={product.name}
                                 width={500} height={500}
                                 style={{ objectFit: 'cover', borderRadius: '15px' }}
@@ -78,7 +78,7 @@ export default function ProductPage({ product }) {
                             <h1>{product.name}</h1>
                             <p className="price">${product.base_price}</p>
                             <p className="description">{product.description}</p>
-                            
+
                             {availableColors.length > 0 && (
                                 <div className="variant-selector">
                                     <label>Color: <b>{selectedColor?.color_name}</b></label>
@@ -125,16 +125,27 @@ export default function ProductPage({ product }) {
 }
 
 export async function getStaticPaths() {
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     const { data: products } = await supabase.from('products').select('id');
     const paths = products.map(product => ({ params: { id: product.id.toString() } }));
     return { paths, fallback: 'blocking' };
 }
 
 export async function getStaticProps({ params }) {
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
+    // LA CORRECCIÓN CLAVE ESTÁ AQUÍ
     const { data: product } = await supabase
         .from('products')
-        .select('*, product_colors(*, product_variants(*))') // Consulta anidada correcta
+        .select(`
+            *,
+            product_colors (
+                *,
+                product_variants (*)
+            )
+        `)
         .eq('id', params.id)
         .single();
+
     return { props: { product }, revalidate: 10 };
 }

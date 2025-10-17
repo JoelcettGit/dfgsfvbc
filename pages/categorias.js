@@ -36,7 +36,7 @@ export default function CategoriasPage({ allProducts }) {
         }
     }, [selectedCategory, allProducts]);
 
-    // Helper function to get the correct product image based on type
+    // --- FUNCIÓN HELPER ACTUALIZADA ---
     const getProductImage = (product) => {
         switch (product.product_type) {
             case 'SIMPLE':
@@ -44,7 +44,7 @@ export default function CategoriasPage({ allProducts }) {
             case 'VARIANT':
                 return product.product_variants?.[0]?.variant_image_url || '/logo-vidaanimada.png';
             case 'BUNDLE':
-                return '/logo-vidaanimada.png'; // Fallback for bundles in lists
+                return product.bundle_links?.[0]?.product_variants?.variant_image_url || '/logo-vidaanimada.png';
             default:
                 return '/logo-vidaanimada.png';
         }
@@ -62,15 +62,15 @@ export default function CategoriasPage({ allProducts }) {
                     <h1>Explora Nuestros Productos</h1>
                     <p className="subtitle">Utiliza el filtro para encontrar tus productos favoritos.</p>
                     <div className="filter-container">
-                        <select 
-                            id="category-filter" 
-                            value={selectedCategory} 
+                        <select
+                            id="category-filter"
+                            value={selectedCategory}
                             onChange={(e) => setSelectedCategory(e.target.value)}
                         >
                             {uniqueCategories.map(cat => (
                                 <option key={cat} value={cat}>
                                     {/* Capitalize first letter */}
-                                    {cat.charAt(0).toUpperCase() + cat.slice(1)} 
+                                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
                                 </option>
                             ))}
                         </select>
@@ -81,11 +81,11 @@ export default function CategoriasPage({ allProducts }) {
                             <Link href={`/productos/${product.id}`} key={product.id}>
                                 <div className="product-card" style={{ cursor: 'pointer' }}>
                                     {product.tag && <span className="product-tag">{product.tag}</span>}
-                                    <Image 
-                                        src={getProductImage(product)} 
-                                        alt={product.name} 
-                                        width={300} height={280} 
-                                        style={{ objectFit: 'cover' }} 
+                                    <Image
+                                        src={getProductImage(product)}
+                                        alt={product.name}
+                                        width={300} height={280}
+                                        style={{ objectFit: 'cover' }}
                                     />
                                     <h4>{product.name}</h4>
                                     <p className="price">Desde ${product.base_price}</p>
@@ -100,22 +100,23 @@ export default function CategoriasPage({ allProducts }) {
     );
 }
 
-// --- getStaticProps (CORRECTED, NO COMMENTS IN SELECT) ---
+// --- getStaticProps ACTUALIZADO (para traer imagen de bundles) ---
 export async function getStaticProps() {
-    // Re-initialize client inside function scope for server-side execution
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-    
+
     const { data: allProducts, error } = await supabase
-      .from('products')
-      .select(`
+        .from('products')
+        .select(`
           id, name, base_price, product_type, image_url, category, tag, 
-          product_variants (variant_image_url)
-      `);
+          product_variants ( variant_image_url ),
+          bundle_links ( product_variants ( variant_image_url ) )
+      `)
+        // .limit(1, { foreignTable: 'bundle_links' }) // Opcional
+        ;
 
     if (error) {
         console.error("Error fetching categories products:", error.message);
-        // Return empty array on error to prevent build failure downstream
-        return { props: { allProducts: [] }, revalidate: 60 }; 
+        return { props: { allProducts: [] }, revalidate: 60 };
     }
 
     return { props: { allProducts: allProducts || [] }, revalidate: 60 };

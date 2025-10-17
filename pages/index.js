@@ -12,17 +12,16 @@ export default function HomePage({ products }) {
   const getProductImage = (product) => {
     switch (product.product_type) {
       case 'SIMPLE':
-        // Simple: usa image_url
+        // Simple: usa image_url directo del producto
         return product.image_url || '/logo-vidaanimada.png';
       case 'VARIANT':
-        // Variant: usa la imagen de la primera variante
+        // Variant: usa la imagen de la primera variante definida
         return product.product_variants?.[0]?.variant_image_url || '/logo-vidaanimada.png';
       case 'BUNDLE':
-        // Bundle: En listados, usamos el fallback.
-        // Mostrar imagen de componente requeriría más datos.
-        return '/logo-vidaanimada.png';
+        // Bundle: usa la imagen de la variante del primer componente listado
+        return product.bundle_links?.[0]?.product_variants?.variant_image_url || '/logo-vidaanimada.png';
       default:
-        return '/logo-vidaanimada.png';
+        return '/logo-vidaanimada.png'; // Fallback por defecto
     }
   };
 
@@ -73,17 +72,21 @@ export default function HomePage({ products }) {
   );
 }
 
+// --- getStaticProps ACTUALIZADO (para traer imagen de bundles) ---
 export async function getStaticProps() {
-  const supabase = createClient( process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY );
-  
-  // --- CONSULTA CORREGIDA (SIN COMENTARIOS) ---
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
   const { data: products, error } = await supabase
     .from('products')
     .select(`
         id, name, base_price, product_type, image_url, tag, 
-        product_variants (variant_image_url) 
+        product_variants ( variant_image_url ),
+        bundle_links ( product_variants ( variant_image_url ) ) 
     `)
-    .eq('tag', 'Destacado'); 
+    .eq('tag', 'Destacado')
+    // Opcional: Limitar bundle_links a 1 para optimizar, aunque Supabase es eficiente
+    // .limit(1, { foreignTable: 'bundle_links' }) 
+    ;
 
   if (error) {
     console.error("Error fetching featured products:", error.message);

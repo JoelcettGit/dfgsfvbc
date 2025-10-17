@@ -8,7 +8,11 @@ import { useCart } from '../../context/CartContext';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 
-// Cliente Supabase (fuera del componente)
+// Importar Carousel y sus estilos
+import "react-responsive-carousel/lib/styles/carousel.min.css";
+import { Carousel } from 'react-responsive-carousel';
+
+// Cliente Supabase
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 export default function ProductPage({ product, recommendedProducts }) {
@@ -16,11 +20,9 @@ export default function ProductPage({ product, recommendedProducts }) {
 
     // Estados para tipo 'VARIANT'
     const [selectedColor, setSelectedColor] = useState(null);
-    const [selectedVariant, setSelectedVariant] = useState(null); // Variante única seleccionada (ej: id de 'Rojo/M')
+    const [selectedVariant, setSelectedVariant] = useState(null);
 
     // Estado para tipo 'BUNDLE' (guarda { linkId: variantId, ... })
-    // linkId es el id de la fila en bundle_links (representa la "pieza" del conjunto)
-    // variantId es el id de la product_variant seleccionada para esa pieza (ej: id de 'Remera Talle M')
     const [selectedBundleVariants, setSelectedBundleVariants] = useState({});
 
     // --- Lógica Derivada ---
@@ -34,7 +36,7 @@ export default function ProductPage({ product, recommendedProducts }) {
                 colors.set(variant.color_name, {
                     color_name: variant.color_name,
                     color_hex: variant.color_hex,
-                    image_url: variant.variant_image_url || '/logo-vidaanimada.png' // Fallback a logo
+                    image_url: variant.variant_image_url || '/logo-vidaanimada.png'
                 });
             }
         });
@@ -55,41 +57,30 @@ export default function ProductPage({ product, recommendedProducts }) {
         let minStock = Infinity;
         let allSelected = true;
 
-        if (!product.bundle_links || product.bundle_links.length === 0) {
-            console.log("Bundle sin links definidos.");
-            return 0; // Si no hay componentes definidos, no hay stock
-        }
+        if (!product.bundle_links || product.bundle_links.length === 0) return 0;
 
-        // Verifica si se seleccionó una variante para CADA componente requerido
         if (Object.keys(selectedBundleVariants).length !== product.bundle_links.length) {
-             // console.log("Faltan selecciones en el bundle.");
              allSelected = false;
         }
 
         product.bundle_links.forEach(link => {
             const selectedVariantId = selectedBundleVariants[link.id];
             if (!selectedVariantId) {
-                // console.log(`Componente ${link.id} no seleccionado.`);
-                allSelected = false; return; // Salir si falta una selección
+                allSelected = false; return;
             }
-            // product_variants_options fue cargado en getStaticProps
             const variant = link.product_variants_options?.find(v => v.id === selectedVariantId);
             if (variant && variant.stock < minStock) {
                 minStock = variant.stock;
             } else if (!variant) {
-                 console.error(`Variante seleccionada ${selectedVariantId} no encontrada en opciones.`);
-                 allSelected = false; // Variante no encontrada
+                 allSelected = false;
             } else if (variant && variant.stock === 0) {
-                 // Si alguna pieza seleccionada tiene stock 0, el stock del bundle es 0
                  minStock = 0;
             }
         });
 
-        // console.log(`AllSelected: ${allSelected}, MinStock: ${minStock}`);
-        if (!allSelected || minStock === Infinity || minStock < 0 ) return 0; // Asegura stock >= 0
+        if (!allSelected || minStock === Infinity || minStock < 0 ) return 0;
         return minStock;
     }, [product, selectedBundleVariants]);
-
 
     // --- Efectos ---
     useEffect(() => {
@@ -102,41 +93,34 @@ export default function ProductPage({ product, recommendedProducts }) {
             const initialSelections = {};
             let possible = true;
             product.bundle_links.forEach(link => {
-                // Intenta seleccionar la primera variante CON STOCK para cada componente
                 const firstAvailableVariant = link.product_variants_options?.find(v => v.stock > 0);
                 if (firstAvailableVariant) {
                     initialSelections[link.id] = firstAvailableVariant.id;
                 } else {
-                    console.warn(`Componente ${link.component_product?.name} no tiene variantes con stock.`);
-                    possible = false; // No hay stock de alguna pieza requerida
+                    possible = false;
                 }
             });
-            // Solo setea si todas las piezas tienen al menos una opción con stock
             if (possible && Object.keys(initialSelections).length === product.bundle_links.length) {
-                // console.log("Setting initial bundle selections:", initialSelections);
                 setSelectedBundleVariants(initialSelections);
-            } else {
-                 console.log("No se pudieron setear selecciones iniciales para el bundle (falta stock?).");
             }
         }
-        // Limpiar selecciones si el producto cambia (evita inconsistencias)
+        // Limpiar selecciones si el producto cambia
         return () => {
             setSelectedColor(null);
             setSelectedVariant(null);
             setSelectedBundleVariants({});
         };
-    }, [product, availableColors]); // Solo depende del producto y colores (para variant)
+    }, [product, availableColors]); // Solo depende del producto
 
     useEffect(() => {
         // Setear talle por defecto cuando cambia el color (VARIANT)
         if (product.product_type === 'VARIANT' && selectedColor && variantsForSelectedColor.length > 0) {
             const firstAvailable = variantsForSelectedColor.find(v => v.stock > 0);
-             // Si hay uno con stock, lo selecciona. Si no, selecciona el primero (aunque no tenga stock)
             setSelectedVariant(firstAvailable || variantsForSelectedColor[0]);
         } else if (product.product_type === 'VARIANT') {
-             setSelectedVariant(null); // Limpia si no hay variantes para el color
+             setSelectedVariant(null);
         }
-    }, [product.product_type, selectedColor, variantsForSelectedColor]); // Depende del color seleccionado
+    }, [product.product_type, selectedColor, variantsForSelectedColor]); // Depende del color
 
     // --- AGREGAR AL CARRITO ---
     const handleAddToCart = () => {
@@ -147,8 +131,8 @@ export default function ProductPage({ product, recommendedProducts }) {
                         id: product.id, name: product.name, price: product.base_price,
                         image_url: product.image_url, type: 'SIMPLE'
                     });
-                    alert(`${product.name} agregado al carrito!`);
-                } else { alert("Producto sin stock."); }
+                    alert(`${product.name} agregado!`);
+                } else { alert("Sin stock."); }
                 break;
             case 'VARIANT':
                 if (selectedVariant && selectedVariant.stock > 0) {
@@ -157,69 +141,80 @@ export default function ProductPage({ product, recommendedProducts }) {
                         image_url: selectedVariant.variant_image_url || selectedColor?.image_url || '/logo-vidaanimada.png',
                         color_name: selectedColor?.color_name, size: selectedVariant.size, type: 'VARIANT'
                     });
-                    alert(`${product.name} (${selectedColor?.color_name || ''}/${selectedVariant.size || ''}) agregado al carrito!`);
-                } else { alert("Selección no disponible o sin stock."); }
+                    alert(`${product.name} (${selectedColor?.color_name || ''}/${selectedVariant.size || ''}) agregado!`);
+                } else { alert("Selección sin stock."); }
                 break;
             case 'BUNDLE':
-                 // Verifica que se hayan seleccionado todas las partes y que haya stock
                  if (bundleStock > 0 && Object.keys(selectedBundleVariants).length === product.bundle_links.length) {
                     const componentVariantIds = Object.values(selectedBundleVariants);
                     const componentsDetails = product.bundle_links.map(link => {
                         const variantId = selectedBundleVariants[link.id];
-                        // Busca la info completa de la variante seleccionada
                         const variant = link.product_variants_options?.find(v => v.id === variantId);
                         return {
-                            // Nombre de la PIEZA (ej: Remera pijama dog)
-                            componentName: link.component_product?.name || 'Pieza', 
-                            // Descripción de la VARIANTE seleccionada (ej: Azul / M)
+                            componentName: link.component_product?.name || 'Pieza',
                             variantName: `${variant?.color_name || ''} / ${variant?.size || ''}`,
-                            // Imagen de la VARIANTE seleccionada
                             image_url: variant?.variant_image_url || link.component_product?.image_url || '/logo-vidaanimada.png'
                         };
                     });
                     addToCart({
                         id: product.id, name: product.name, price: product.base_price,
-                        // Usa la imagen del primer componente seleccionado como imagen principal del bundle en el carrito
                         image_url: componentsDetails[0]?.image_url || '/logo-vidaanimada.png',
                         type: 'BUNDLE',
-                        // Array de IDs de las product_variants seleccionadas (para descontar stock)
-                        componentVariantIds: componentVariantIds, 
-                         // Array de objetos con detalles de cada componente (para mostrar en carrito/pedido)
-                        componentsDetails: componentsDetails 
+                        componentVariantIds: componentVariantIds,
+                        componentsDetails: componentsDetails
                     });
-                    alert(`${product.name} agregado al carrito!`);
-                } else { 
+                    alert(`${product.name} agregado!`);
+                } else {
                      if (Object.keys(selectedBundleVariants).length !== product.bundle_links.length) {
                          alert("Por favor, selecciona una opción para cada parte del conjunto.");
                      } else {
-                         alert("Conjunto no disponible en esta combinación de tallas o sin stock."); 
+                         alert("Conjunto no disponible en esta combinación de tallas o sin stock.");
                      }
                  }
                 break;
-            default: alert("Tipo de producto desconocido.");
+            default: alert("Tipo desconocido.");
         }
     };
 
+    // --- Lógica para Imágenes del Slider ---
+    const sliderImages = useMemo(() => {
+        if (!product) return [{ url: '/logo-vidaanimada.png', alt: 'Cargando...' }];
+
+        switch (product.product_type) {
+            case 'SIMPLE':
+                return [{ url: product.image_url || '/logo-vidaanimada.png', alt: product.name }];
+            
+            case 'VARIANT':
+                // Muestra la imagen principal del color seleccionado
+                const variantImageUrl = selectedColor?.image_url || product.product_variants?.[0]?.variant_image_url;
+                return [{ url: variantImageUrl || '/logo-vidaanimada.png', alt: `${product.name} ${selectedColor?.color_name || ''}` }];
+            
+            case 'BUNDLE':
+                 if (!product.bundle_links || product.bundle_links.length === 0) {
+                     return [{ url: '/logo-vidaanimada.png', alt: product.name }];
+                 }
+                 // Mapea cada componente a su imagen de variante seleccionada
+                 return product.bundle_links.map(link => {
+                     const selectedVariantId = selectedBundleVariants[link.id];
+                     const variant = link.product_variants_options?.find(v => v.id === selectedVariantId);
+                     // Prioriza imagen de variante, luego imagen de producto componente, luego fallback
+                     const imageUrl = variant?.variant_image_url || link.component_product?.image_url || '/logo-vidaanimada.png';
+                     const altText = `${link.component_product?.name || 'Pieza'} ${variant?.size || ''}`;
+                     return { url: imageUrl, alt: altText };
+                 }).filter(img => img.url); // Filtra por si alguna URL falla
+
+            default:
+                return [{ url: '/logo-vidaanimada.png', alt: 'Producto' }];
+        }
+    }, [product, selectedColor, selectedVariant, selectedBundleVariants]); // Depende de las selecciones
 
     if (!product) return <div>Cargando...</div>;
 
-    // --- Lógica de Display ---
-    const displayImage = 
-        product.product_type === 'SIMPLE' ? product.image_url :
-        product.product_type === 'VARIANT' ? (selectedColor?.image_url || product.product_variants?.[0]?.variant_image_url) :
-        // Bundle: Muestra imagen de la variante seleccionada del primer componente, o fallback
-        product.bundle_links?.[0]?.product_variants_options?.find(v => v.id === selectedBundleVariants[product.bundle_links[0]?.id])?.variant_image_url || 
-        product.bundle_links?.[0]?.component_product?.image_url; 
-        
-    // Clave única para forzar refresh de <Image> al cambiar selecciones
-    const displayImageKey = product.id + (selectedColor?.color_name || '') + JSON.stringify(selectedBundleVariants);
-
-    // Determina si el botón "Agregar al Carrito" debe estar deshabilitado
-    const isAddToCartDisabled = 
+    // Determinar si el botón de añadir debe estar deshabilitado
+    const isAddToCartDisabled =
         (product.product_type === 'SIMPLE' && product.stock <= 0) ||
         (product.product_type === 'VARIANT' && (!selectedVariant || selectedVariant.stock <= 0)) ||
         (product.product_type === 'BUNDLE' && (bundleStock <= 0 || Object.keys(selectedBundleVariants).length !== product.bundle_links?.length));
-
 
     // Helper para imagen de recomendados
      const getRecommendedImage = (recProduct) => {
@@ -238,26 +233,45 @@ export default function ProductPage({ product, recommendedProducts }) {
             <main>
                 <section className="page-section">
                     <div className="product-detail-layout">
-                        {/* Sección de Imagen */}
+                        {/* --- SECCIÓN DE IMAGEN CON CAROUSEL --- */}
                         <div className="product-image-section">
-                            <Image
-                                src={displayImage || '/logo-vidaanimada.png'} alt={product.name}
-                                width={500} height={500} style={{ objectFit: 'cover', borderRadius: '15px' }}
-                                key={displayImageKey} priority // Carga prioritaria para LCP
-                            />
+                            <Carousel
+                                showArrows={sliderImages.length > 1} // Muestra flechas solo si hay más de 1 imagen
+                                showThumbs={sliderImages.length > 1} // Muestra miniaturas solo si hay más de 1 imagen
+                                showStatus={false}
+                                infiniteLoop={sliderImages.length > 1} // Loop solo si hay más de 1 imagen
+                                useKeyboardArrows={true}
+                                className="product-carousel"
+                                // Asegura que el carrusel se actualice cuando cambian las selecciones del bundle
+                                selectedItem={0} // Reinicia al primer slide si las imágenes cambian (puede necesitar ajuste)
+                                key={JSON.stringify(selectedBundleVariants)} // Forza re-render del carrusel al cambiar selecciones
+                            >
+                                {sliderImages.map((image, index) => (
+                                    <div key={index} style={{ borderRadius: '15px', overflow: 'hidden' }}> {/* Aplicar borde aquí */}
+                                        <Image
+                                            src={image.url}
+                                            alt={image.alt}
+                                            width={500}
+                                            height={500}
+                                            style={{ objectFit: 'cover', display: 'block' }} // display block es importante
+                                            priority={index === 0}
+                                        />
+                                    </div>
+                                ))}
+                            </Carousel>
                         </div>
-                        {/* Sección de Información y Selectores */}
+
+                        {/* --- Sección de Información y Selectores --- */}
                         <div className="product-info-section">
                             <h1>{product.name}</h1>
                             <p className="price">${product.base_price}</p>
                             <p className="description">{product.description}</p>
 
-                            {/* --- RENDERIZADO CONDICIONAL --- */}
+                            {/* --- RENDERIZADO CONDICIONAL POR TIPO --- */}
 
                             {/* --- CASO: VARIANT --- */}
                             {product.product_type === 'VARIANT' && (
                                 <>
-                                    {/* Selector de Color */}
                                     {availableColors.length > 0 && (
                                          <div className="variant-selector">
                                              <label>Color: <b>{selectedColor?.color_name || 'Selecciona'}</b></label>
@@ -274,18 +288,17 @@ export default function ProductPage({ product, recommendedProducts }) {
                                              </div>
                                          </div>
                                      )}
-                                    {/* Selector de Talle */}
                                     {variantsForSelectedColor.length > 0 && (
                                         <div className="variant-selector">
                                             <label>Talle:</label>
                                             <div className="size-button-list">
                                                 {variantsForSelectedColor.map(variant => (
                                                     <button key={variant.id}
-                                                        className={`size-button ${selectedVariant?.id === variant.id ? 'active' : ''} ${variant.stock === 0 ? 'disabled' : ''}`}
+                                                        className={`size-button ${selectedVariant?.id === variant.id ? 'active' : ''} ${variant.stock <= 0 ? 'disabled' : ''}`}
                                                         onClick={() => setSelectedVariant(variant)}
-                                                        disabled={variant.stock === 0}
-                                                        title={variant.stock === 0 ? 'Sin stock' : `Seleccionar talle ${variant.size}`}
-                                                        aria-label={`Seleccionar talle ${variant.size}${variant.stock === 0 ? ' (Sin stock)' : ''}`}
+                                                        disabled={variant.stock <= 0}
+                                                        title={variant.stock <= 0 ? 'Sin stock' : `Seleccionar talle ${variant.size}`}
+                                                        aria-label={`Seleccionar talle ${variant.size}${variant.stock <= 0 ? ' (Sin stock)' : ''}`}
                                                     >
                                                         {variant.size}
                                                     </button>
@@ -293,11 +306,10 @@ export default function ProductPage({ product, recommendedProducts }) {
                                             </div>
                                         </div>
                                     )}
-                                    {/* Info de Stock (Variable) */}
                                     <div className="stock-info">
-                                        {selectedVariant ? 
-                                            (selectedVariant.stock > 0 ? `${selectedVariant.stock} unidades disponibles` : 'Sin stock') : 
-                                            (availableColors.length > 0 && variantsForSelectedColor.length === 0 ? 'Selecciona un color' : 'Selecciona un talle')
+                                        {selectedVariant ?
+                                            (selectedVariant.stock > 0 ? `${selectedVariant.stock} unidades disponibles` : 'Sin stock') :
+                                            (availableColors.length > 0 && variantsForSelectedColor.length === 0 ? 'Color no disponible' : 'Selecciona talle')
                                         }
                                     </div>
                                 </>
@@ -313,51 +325,45 @@ export default function ProductPage({ product, recommendedProducts }) {
                             {/* --- CASO: BUNDLE --- */}
                             {product.product_type === 'BUNDLE' && (
                                 <div className="bundle-selectors">
-                                    {/* Itera sobre cada "link" (pieza) del bundle */}
-                                    {product.bundle_links.map(link => (
+                                    {(product.bundle_links || []).map(link => (
                                         <div key={link.id} className="variant-selector">
-                                             {/* Label: Nombre de la pieza (ej: Remera pijama dog) */}
                                             <label>{link.component_product?.name || 'Componente'}:</label>
-                                            {/* Lista de botones de talle para ESTA pieza */}
                                             <div className="size-button-list">
-                                                {/* Itera sobre las opciones de variante para esta pieza */}
                                                  {(link.product_variants_options || [])
                                                     .map(variant_option => (
                                                     <button key={variant_option.id}
-                                                        className={`size-button ${selectedBundleVariants[link.id] === variant_option.id ? 'active' : ''} ${variant_option.stock === 0 ? 'disabled' : ''}`}
+                                                        className={`size-button ${selectedBundleVariants[link.id] === variant_option.id ? 'active' : ''} ${variant_option.stock <= 0 ? 'disabled' : ''}`}
                                                         onClick={() => setSelectedBundleVariants(prev => ({
                                                             ...prev,
-                                                            [link.id]: variant_option.id // Actualiza la selección para este linkId
+                                                            [link.id]: variant_option.id
                                                         }))}
-                                                        disabled={variant_option.stock === 0}
-                                                        title={variant_option.stock === 0 ? 'Sin stock' : `Seleccionar ${link.component_product?.name || 'pieza'} talle ${variant_option.size}`}
-                                                        aria-label={`Seleccionar ${link.component_product?.name || 'pieza'} talle ${variant_option.size}${variant_option.stock === 0 ? ' (Sin stock)' : ''}`}
+                                                        disabled={variant_option.stock <= 0}
+                                                        title={variant_option.stock <= 0 ? 'Sin stock' : `Seleccionar ${link.component_product?.name || 'pieza'} talle ${variant_option.size}`}
+                                                        aria-label={`Seleccionar ${link.component_product?.name || 'pieza'} talle ${variant_option.size}${variant_option.stock <= 0 ? ' (Sin stock)' : ''}`}
                                                     >
-                                                        {variant_option.size} 
-                                                        {/* Podríamos añadir color si fuera relevante: {variant_option.color_name} */}
+                                                        {variant_option.size}
                                                     </button>
                                                 ))}
                                             </div>
                                         </div>
                                     ))}
-                                    {/* Info de Stock (Bundle) */}
                                     <div className="stock-info">
                                          {Object.keys(selectedBundleVariants).length !== product.bundle_links?.length ? 'Selecciona una opción para cada parte' :
                                          (bundleStock > 0 ? `${bundleStock} conjuntos disponibles` : 'Sin stock en esta combinación')}
                                     </div>
                                 </div>
                             )}
-                            
-                            {/* --- Botón AddToCart (Común a todos) --- */}
+
+                            {/* --- Botón AddToCart --- */}
                             <button onClick={handleAddToCart} className="btn-primary add-to-cart-btn" disabled={isAddToCartDisabled}>
-                                {isAddToCartDisabled && product.product_type !== 'SIMPLE' && Object.keys(selectedBundleVariants).length !== product.bundle_links?.length ? 'Selecciona opciones' : 
-                                 isAddToCartDisabled ? 'Sin Stock' : 
-                                'Agregar al Carrito'}
-                            </button>
+                               {isAddToCartDisabled && product.product_type === 'BUNDLE' && Object.keys(selectedBundleVariants).length !== product.bundle_links?.length ? 'Selecciona opciones' :
+                                isAddToCartDisabled ? 'Sin Stock' :
+                               'Agregar al Carrito'}
+                           </button>
                         </div>
                     </div>
                 </section>
-                
+
                 {/* --- Sección Recomendados --- */}
                 {recommendedProducts && recommendedProducts.length > 0 && (
                      <section className="content-section-alt">
@@ -366,11 +372,8 @@ export default function ProductPage({ product, recommendedProducts }) {
                             {recommendedProducts.map((recProduct) => (
                                  <Link href={`/productos/${recProduct.id}`} key={recProduct.id} passHref>
                                      <div className="product-card" style={{ cursor: 'pointer' }}>
-                                        <Image src={getRecommendedImage(recProduct)} alt={recProduct.name} 
-                                               width={300} height={280} style={{ objectFit: 'cover' }} 
-                                               // Añadir un placeholder difuminado puede mejorar la carga percibida
-                                               // placeholder="blur" 
-                                               // blurDataURL="/path/to/low-res-placeholder.jpg" 
+                                        <Image src={getRecommendedImage(recProduct)} alt={recProduct.name}
+                                               width={300} height={280} style={{ objectFit: 'cover' }}
                                         />
                                         <h4>{recProduct.name}</h4>
                                         <p className="price">Desde ${recProduct.base_price}</p>
@@ -386,11 +389,10 @@ export default function ProductPage({ product, recommendedProducts }) {
     );
 }
 
-
 // --- getStaticPaths ---
 export async function getStaticPaths() {
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-    const { data: products, error } = await supabase.from('products').select('id'); 
+    const { data: products, error } = await supabase.from('products').select('id');
     if (error || !products) return { paths: [], fallback: 'blocking' };
     const paths = products.map(product => ({ params: { id: product.id.toString() } }));
     return { paths, fallback: 'blocking' };
@@ -409,12 +411,12 @@ export async function getStaticProps({ params }) {
             product_variants (*),
             bundle_links (
               id, quantity,
-              product_variants!inner ( product_id ) 
+              product_variants!inner ( product_id )
             )
         `)
         .eq('id', id)
         .single();
-    
+
     if (productError || !product) {
         console.error(`Error fetching product ${id}:`, productError?.message);
         return { notFound: true };
@@ -422,60 +424,62 @@ export async function getStaticProps({ params }) {
 
     // 2. Si es BUNDLE, fetch todas las variantes de los componentes
     if (product.product_type === 'BUNDLE' && product.bundle_links?.length > 0) {
-        // Obtenemos los IDs únicos de los productos que componen el bundle
         const componentProductIds = [...new Set(product.bundle_links.map(link => link.product_variants.product_id))];
-        
+
         const { data: componentVariantsData, error: variantsError } = await supabase
             .from('product_variants')
             .select(`
                 id, product_id, color_name, color_hex, size, stock, variant_image_url,
-                products (id, name, image_url) /* Traemos producto padre */
+                products (id, name, image_url)
             `)
             .in('product_id', componentProductIds);
 
         if (variantsError) {
              console.error(`Error fetching component variants for bundle ${id}:`, variantsError.message);
-             return { notFound: true }; // Error crítico
+             return { notFound: true };
         }
 
-        // "Hidratar" bundle_links con las opciones y datos del componente
+        // "Hidratar" bundle_links
         product.bundle_links = product.bundle_links.map(link => {
-             // Encuentra la info del producto padre (componente) de esta variante específica
              const componentInfo = componentVariantsData.find(v => v.product_id === link.product_variants.product_id)?.products;
              return {
                  ...link,
-                 component_product: componentInfo || { name: 'Componente Desconocido' }, // Nombre/Imagen de la pieza (Remera)
-                 // Filtra y añade TODAS las variantes disponibles para esta pieza específica
+                 component_product: componentInfo || { name: 'Componente Desconocido' },
                  product_variants_options: componentVariantsData.filter(
                      variant => variant.product_id === link.product_variants.product_id
-                 ) || [] // Asegura que sea un array
+                 ) || []
              };
-         });
+         }).filter(link => link.product_variants_options.length > 0); // Filtra links si su componente no tiene variantes
+         
+         // Si después de filtrar no quedan links válidos, tratamos como si no fuera bundle (o mostramos error)
+         if(product.bundle_links.length === 0) {
+             console.warn(`Bundle ${id} no tiene componentes válidos con variantes.`);
+             // Opcional: cambiar product_type a algo inválido o devolver notFound
+             // product.product_type = 'INVALID_BUNDLE'; 
+         }
     }
-    
+
     // 3. Fetch productos recomendados
      const { data: recommendedProducts, error: recommendedError } = await supabase
         .from('products')
         .select(`
-            id, name, base_price, product_type, image_url, tag, 
+            id, name, base_price, product_type, image_url, tag,
             product_variants (variant_image_url),
             bundle_links ( product_variants ( variant_image_url ) )
         `)
         .eq('tag', 'Destacado')
-        .neq('id', id) 
+        .neq('id', id)
         .limit(4);
 
     if (recommendedError) {
         console.error("Error fetching recommended products:", recommendedError.message);
     }
 
-    // Usar JSON.stringify/parse es un truco común para asegurar la serialización correcta
-    // de objetos complejos (como fechas o datos anidados) para getStaticProps.
-    return { 
-        props: { 
-            product: JSON.parse(JSON.stringify(product)), 
-            recommendedProducts: recommendedProducts || [] 
-        }, 
-        revalidate: 60 // Revalida cada minuto
+    return {
+        props: {
+            product: JSON.parse(JSON.stringify(product)),
+            recommendedProducts: recommendedProducts || []
+        },
+        revalidate: 60
     };
 }

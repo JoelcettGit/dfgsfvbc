@@ -92,7 +92,7 @@ function ProductListView({ products, onAddNew, onEdit, onDelete }) {
                             <tr key={p.id}>
                                 <td>{p.name}</td>
                                 <td>{p.category}</td>
-                                <td>{p.product_colors.length}</td>
+                                <td>{p.basePrice}</td>
                                 <td className="variant-actions">
                                     <button onClick={() => onEdit(p)} className="btn-edit">Gestionar</button>
                                     <button onClick={() => onDelete(p.id, p.name)} className="btn-delete">Eliminar</button>

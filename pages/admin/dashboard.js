@@ -81,7 +81,7 @@ export default function AdminDashboard() {
         if (error) console.error("Error al cargar pedidos:", error.message);
         else setOrders(data || []);
     };
-    
+
     const handleDeleteProduct = async (productId, productName) => {
         if (!confirm(`¿Estás seguro de que quieres eliminar "${productName}" y todas sus variantes/componentes? Esta acción es permanente.`)) return;
         const { error } = await supabase.from('products').delete().eq('id', productId);
@@ -101,7 +101,7 @@ export default function AdminDashboard() {
 
     const handleAddNewProduct = () => { setEditingProduct(null); setView('form'); };
     const handleEditProduct = (product) => { setEditingProduct(product); setView('form'); };
-    
+
     const handleSaveAndBack = async () => {
         await fetchProducts();
         setView('products');
@@ -112,37 +112,37 @@ export default function AdminDashboard() {
     return (
         <div className="admin-dashboard">
             <header className="admin-header">
-                 <div>
-                     <h1>Dashboard</h1>
-                     <p>Bienvenido, {user?.email}</p>
-                 </div>
-                 <nav className="admin-nav">
-                     <button onClick={() => setView('products')} className={view === 'products' || view === 'form' ? 'active' : ''}>
-                         Productos ({products.length})
-                     </button>
-                     <button onClick={() => setView('orders')} className={view === 'orders' ? 'active' : ''}>
-                         Pedidos ({orders.length})
-                     </button>
-                 </nav>
-                 <div>
-                     <button onClick={() => router.push('/')} className="btn-secondary" style={{ marginRight: '1rem' }}>Ver Tienda</button>
-                     <button onClick={handleLogout} className="btn-secondary">Cerrar Sesión</button>
-                 </div>
+                <div>
+                    <h1>Dashboard</h1>
+                    <p>Bienvenido, {user?.email}</p>
+                </div>
+                <nav className="admin-nav">
+                    <button onClick={() => setView('products')} className={view === 'products' || view === 'form' ? 'active' : ''}>
+                        Productos ({products.length})
+                    </button>
+                    <button onClick={() => setView('orders')} className={view === 'orders' ? 'active' : ''}>
+                        Pedidos ({orders.length})
+                    </button>
+                </nav>
+                <div>
+                    <button onClick={() => router.push('/')} className="btn-secondary" style={{ marginRight: '1rem' }}>Ver Tienda</button>
+                    <button onClick={handleLogout} className="btn-secondary">Cerrar Sesión</button>
+                </div>
             </header>
             <main className="admin-main">
                 {view === 'products' && (
                     <ProductListView products={products} onAddNew={handleAddNewProduct} onEdit={handleEditProduct} onDelete={handleDeleteProduct} />
                 )}
                 {view === 'form' && (
-                    <ProductFormView 
-                        product={editingProduct} 
-                        onBack={() => setView('products')} 
+                    <ProductFormView
+                        product={editingProduct}
+                        onBack={() => setView('products')}
                         onSave={handleSaveAndBack}
                         allProducts={products}
                     />
                 )}
                 {view === 'orders' && (
-                    <OrderListView orders={orders} fetchOrders={fetchOrders} /> {/* Pasamos fetchOrders para recargar */}
+                    <OrderListView orders={orders} fetchOrders={fetchOrders} />
                 )}
             </main>
         </div>
@@ -249,18 +249,18 @@ function ProductFormView({ product, onBack, onSave, allProducts }) {
                 const { error } = await supabase.from('products').update(productData).eq('id', currentProductId);
                 if (error) throw error;
                 alert("Producto actualizado.");
-                 // Actualiza el estado local también al editar (opcional pero bueno)
-                 setCurrentProduct(prev => ({ ...prev, ...productData }));
+                // Actualiza el estado local también al editar (opcional pero bueno)
+                setCurrentProduct(prev => ({ ...prev, ...productData }));
             }
             await revalidateStaticPages(currentProductId);
             // No llamamos a onSave() todavía si es un producto nuevo,
             // para permitir añadir variantes/componentes antes de volver.
             // Si es una edición, sí podemos volver:
             if (product) { // Si 'product' (la prop original) existía, era una edición
-                 onSave(); 
+                onSave();
             } else {
-                 setIsSaving(false); // Solo quita el estado de guardando si es nuevo
-                 // El usuario se queda en el form para añadir variantes/componentes
+                setIsSaving(false); // Solo quita el estado de guardando si es nuevo
+                // El usuario se queda en el form para añadir variantes/componentes
             }
         } catch (error) {
             console.error("Error detallado:", error);
@@ -310,7 +310,7 @@ function ProductFormView({ product, onBack, onSave, allProducts }) {
             await revalidateStaticPages(currentProduct.id); // <-- USA currentProduct
         }
     };
-    
+
     const handleEditVariantClick = (variant) => { setManagingVariant(variant); };
 
     const handleSaveVariantChanges = async (updatedVariant) => {
@@ -385,24 +385,24 @@ function ProductFormView({ product, onBack, onSave, allProducts }) {
                     <div className="variants-section">
                         <h3>Variantes del Producto</h3>
                         <div className="table-container">
-                             <table className="products-table">
-                                 <thead><tr><th>Imagen</th><th>Color</th><th>Talle</th><th>Stock</th><th>Acciones</th></tr></thead>
-                                 <tbody>
-                                     {variants.map(v => (
-                                         <tr key={v.id}>
-                                             <td><Image src={v.variant_image_url || '/logo-vidaanimada.png'} alt={`${v.color_name} ${v.size}`} width={50} height={50} className="table-product-image" /></td>
-                                             <td><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '20px', height: '20px', backgroundColor: v.color_hex || '#fff', borderRadius: '50%', border: '1px solid #eee' }}></span>{v.color_name || '-'}</div></td>
-                                             <td>{v.size || '-'}</td>
-                                             <td>{v.stock} u.</td>
-                                             <td className="variant-actions">
-                                                 <button onClick={() => handleEditVariantClick(v)} className="btn-edit">Editar</button>
-                                                 <button onClick={() => handleDeleteVariant(v.id)} className="btn-delete">Eliminar</button>
-                                             </td>
-                                         </tr>
-                                     ))}
-                                 </tbody>
-                             </table>
-                         </div>
+                            <table className="products-table">
+                                <thead><tr><th>Imagen</th><th>Color</th><th>Talle</th><th>Stock</th><th>Acciones</th></tr></thead>
+                                <tbody>
+                                    {variants.map(v => (
+                                        <tr key={v.id}>
+                                            <td><Image src={v.variant_image_url || '/logo-vidaanimada.png'} alt={`${v.color_name} ${v.size}`} width={50} height={50} className="table-product-image" /></td>
+                                            <td><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '20px', height: '20px', backgroundColor: v.color_hex || '#fff', borderRadius: '50%', border: '1px solid #eee' }}></span>{v.color_name || '-'}</div></td>
+                                            <td>{v.size || '-'}</td>
+                                            <td>{v.stock} u.</td>
+                                            <td className="variant-actions">
+                                                <button onClick={() => handleEditVariantClick(v)} className="btn-edit">Editar</button>
+                                                <button onClick={() => handleDeleteVariant(v.id)} className="btn-delete">Eliminar</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                         <form onSubmit={handleAddVariant} className="add-variant-form">
                             <h4>Agregar Variante</h4>
                             <input type="text" placeholder="Nombre Color" value={newVariantColorName} onChange={e => setNewVariantColorName(e.target.value)} />
@@ -418,11 +418,11 @@ function ProductFormView({ product, onBack, onSave, allProducts }) {
                                 <input type="file" id="newVariantImageFile" accept="image/*" onChange={e => setNewVariantImageFile(e.target.files[0])} />
                                 {newVariantImageFile && <p className="selected-file-name">{newVariantImageFile.name}</p>}
                             </div>
-                             <button type="submit" className="btn-primary" disabled={!currentProduct}>Añadir Variante</button> {/* <-- DISABLED CORREGIDO */}
+                            <button type="submit" className="btn-primary" disabled={!currentProduct}>Añadir Variante</button> {/* <-- DISABLED CORREGIDO */}
                         </form>
                     </div>
                 )}
-                
+
                 {/* --- SECCIÓN BUNDLE (CORREGIDA CONDICIÓN) --- */}
                 {currentProduct && productType === 'BUNDLE' && (
                     <div className="variants-section">
@@ -434,8 +434,8 @@ function ProductFormView({ product, onBack, onSave, allProducts }) {
                                 <tbody>
                                     {bundleLinks.map(link => (
                                         <tr key={link.id}>
-                                             <td>{link.product_variants?.products?.name || 'Producto no encontrado'}</td> {/* <-- Más seguro */}
-                                             <td>{link.product_variants?.color_name || '-'} / {link.product_variants?.size || '-'}</td> {/* <-- Más seguro */}
+                                            <td>{link.product_variants?.products?.name || 'Producto no encontrado'}</td> {/* <-- Más seguro */}
+                                            <td>{link.product_variants?.color_name || '-'} / {link.product_variants?.size || '-'}</td> {/* <-- Más seguro */}
                                             <td className="variant-actions">
                                                 <button onClick={() => handleDeleteBundleComponent(link.id)} className="btn-delete">Quitar</button>
                                             </td>
@@ -460,7 +460,7 @@ function ProductFormView({ product, onBack, onSave, allProducts }) {
                                     {variantsForSelectedBundleProduct.map(v => (<option key={v.id} value={v.id}>{v.color_name} / {v.size} (Stock: {v.stock})</option>))}
                                 </select>
                             </div>
-                             <button type="submit" className="btn-primary" disabled={!currentProduct || !selectedBundleVariant}>Añadir Componente</button> {/* <-- DISABLED CORREGIDO */}
+                            <button type="submit" className="btn-primary" disabled={!currentProduct || !selectedBundleVariant}>Añadir Componente</button> {/* <-- DISABLED CORREGIDO */}
                         </form>
                     </div>
                 )}
@@ -562,20 +562,20 @@ function EditVariantModal({ variant, onClose, onSave }) {
             <div className="modal-content">
                 <h2>Editando Variante</h2>
                 <form onSubmit={handleUpdate}>
-                     <label>Nombre Color</label><input type="text" value={colorName} onChange={e => setColorName(e.target.value)} />
-                     <div className="color-picker-wrapper">
-                         <label>Color Hex</label>
-                         <div className="color-swatch" onClick={() => setDisplayColorPicker(!displayColorPicker)}><div className="color-preview" style={{ background: colorHex }} /></div>
-                         {displayColorPicker ? (<div className="color-popover"><div className="color-cover" onClick={() => setDisplayColorPicker(false)} /><SketchPicker color={colorHex} onChange={(color) => setColorHex(color.hex)} /></div>) : null}
-                     </div>
-                     <label>Talle</label><input type="text" value={size} onChange={e => setSize(e.target.value)} />
-                     <label>Stock</label><input type="number" value={stock} onChange={e => setStock(e.target.value)} required />
-                     <div className="file-input-container">
-                         <label htmlFor="editVariantImageFile">Cambiar Imagen (Opcional)</label>
-                         <input type="file" id="editVariantImageFile" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} />
-                         {imageFile && <p className="selected-file-name">{imageFile.name}</p>}
-                         {!imageFile && currentImageUrl && <p className="selected-file-name">Actual: <a href={currentImageUrl} target="_blank" rel="noopener noreferrer">Ver</a></p>}
-                     </div>
+                    <label>Nombre Color</label><input type="text" value={colorName} onChange={e => setColorName(e.target.value)} />
+                    <div className="color-picker-wrapper">
+                        <label>Color Hex</label>
+                        <div className="color-swatch" onClick={() => setDisplayColorPicker(!displayColorPicker)}><div className="color-preview" style={{ background: colorHex }} /></div>
+                        {displayColorPicker ? (<div className="color-popover"><div className="color-cover" onClick={() => setDisplayColorPicker(false)} /><SketchPicker color={colorHex} onChange={(color) => setColorHex(color.hex)} /></div>) : null}
+                    </div>
+                    <label>Talle</label><input type="text" value={size} onChange={e => setSize(e.target.value)} />
+                    <label>Stock</label><input type="number" value={stock} onChange={e => setStock(e.target.value)} required />
+                    <div className="file-input-container">
+                        <label htmlFor="editVariantImageFile">Cambiar Imagen (Opcional)</label>
+                        <input type="file" id="editVariantImageFile" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} />
+                        {imageFile && <p className="selected-file-name">{imageFile.name}</p>}
+                        {!imageFile && currentImageUrl && <p className="selected-file-name">Actual: <a href={currentImageUrl} target="_blank" rel="noopener noreferrer">Ver</a></p>}
+                    </div>
                     <div className="modal-actions">
                         <button type="submit" className="btn-primary" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Guardar Cambios'}</button>
                         <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>

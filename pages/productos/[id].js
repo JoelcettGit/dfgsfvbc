@@ -206,8 +206,7 @@ export default function ProductPage({ product, recommendedProducts }) {
     }, [product, selectedColor]);
     useEffect(() => {
         setCurrentImageIndex(0); // Vuelve a la primera imagen
-    }, [displayImages]); // Se ejecuta si el array 'displayImages' cambia
-
+    }, [sliderImages]);
     if (!product) return <div>Cargando...</div>;
     // Determinar si el botón de añadir debe estar deshabilitado
     const isAddToCartDisabled =
@@ -225,9 +224,8 @@ export default function ProductPage({ product, recommendedProducts }) {
         }
     };
     // Imagen principal actual
-    const mainImageUrl = displayImages[currentImageIndex]?.url || '/logo-vidaanimada.png';
-    const mainImageAlt = displayImages[currentImageIndex]?.alt || product.name;
-    return (
+    const mainImageUrl = sliderImages[currentImageIndex]?.url || '/logo-vidaanimada.png';
+    const mainImageAlt = sliderImages[currentImageIndex]?.alt || product.name; return (
         <>
             <Head>
                 <title>{product.name} - Vida Animada</title>
@@ -239,14 +237,14 @@ export default function ProductPage({ product, recommendedProducts }) {
                     <div className="product-detail-layout-gallery"> {/* Nueva clase contenedora */}
 
                         {/* --- Columna de Miniaturas (Thumbnails) --- */}
-                        {displayImages.length > 1 && ( // Solo muestra si hay más de 1 imagen
+                        {sliderImages.length > 1 && ( // Solo muestra si hay más de 1 imagen
                             <div className="product-thumbnails">
-                                {displayImages.map((image, index) => (
+                                {sliderImages.map((image, index) => (
                                     <button
                                         key={index}
                                         className={`thumbnail-item ${index === currentImageIndex ? 'active' : ''}`}
                                         onClick={() => setCurrentImageIndex(index)}
-                                        aria-label={`Ver imagen ${index + 1} de ${displayImages.length}`}
+                                        aria-label={`Ver imagen ${index + 1} de ${sliderImages.length}`}
                                     >
                                         <Image
                                             src={image.url}

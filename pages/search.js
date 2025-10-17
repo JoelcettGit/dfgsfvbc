@@ -27,13 +27,13 @@ export default function SearchPage({ products, searchTerm }) {
     return (
         <>
             <Head>
-                <title>Resultados para "{searchTerm}" - Vida Animada</title>
+                <title>Resultados para &quot;{searchTerm}&quot; - Vida Animada</title>
                 <link rel="icon" href="/logo-vidaanimada.png" />
             </Head>
             <Header />
             <main>
                 <section className="page-section">
-                    <h1>Resultados de búsqueda para: "{searchTerm}"</h1>
+                    <h1>Resultados de búsqueda para: &quot;{searchTerm}&quot;</h1>
 
                     {products && products.length > 0 ? (
                         <div className="product-grid" style={{ marginTop: '2rem' }}>

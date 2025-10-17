@@ -128,7 +128,7 @@ export default function ProductPage({ product, recommendedProducts }) {
         } else if (product.product_type === 'VARIANT') { setSelectedVariant(null); }
     }, [product.product_type, selectedColor, variantsForSelectedColor]);
 
-    // Resetear índice de imagen SOLO si la lista de imágenes cambia (usa useRef)
+// --- ¡EFECTO AJUSTADO PARA RESETEAR ÍNDICE! ---
     const prevDisplayImagesRef = useRef();
     useEffect(() => {
         const currentImagesString = JSON.stringify(displayImages);
@@ -137,7 +137,8 @@ export default function ProductPage({ product, recommendedProducts }) {
             setCurrentImageIndex(0);
             prevDisplayImagesRef.current = displayImages;
         }
-    }, [displayImages]);
+        // Añadimos selectedColor porque displayImages depende de él
+    }, [displayImages, selectedColor]);
 
     // --- Manejador AddToCart ---
     const handleAddToCart = () => {

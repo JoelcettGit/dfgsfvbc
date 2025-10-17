@@ -177,15 +177,20 @@ h2 {
 }
 
 /* --- Grilla de Productos --- */
+
+/* --- Grilla de Productos (Corregida para item único) --- */
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  /* Columnas responsivas */
+  /* Cambiamos 1fr por un ancho máximo (ej: 280px) */
+  /* Ajusta 280px si quieres las cards un poco más anchas/estrechas */
+  grid-template-columns: repeat(auto-fit, minmax(220px, 280px));
   gap: 1.8rem;
   margin-top: 2rem;
+  /* Centra los items DENTRO de sus celdas */
+  justify-items: center;
+  /* Centra el bloque de celdas si no ocupan todo el ancho */
   justify-content: center;
 }
-
 /* --- Card de Producto Refinada (Aplicado a .product-card) --- */
 .product-card {
   position: relative;
@@ -1326,7 +1331,15 @@ h2 {
   background-color: #89c5dd;
   /* Azul más claro al pasar el mouse */
 }
+/* Target h4 specifically when it's inside any link */
+a h4 {
+  text-decoration: none !important; /* Forzar sin subrayado */
+}
 
+/* Target .price specifically when it's inside any link */
+a .price {
+  text-decoration: none !important; /* Forzar sin subrayado */
+}
 /* --- 5. ANIMACIONES --- */
 @keyframes moveGradient {
   0% {

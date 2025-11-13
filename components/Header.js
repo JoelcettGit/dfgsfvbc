@@ -57,7 +57,7 @@ export default function Header() {
             <nav className="main-nav">
                 <ul>
                     <li><Link href="/">Inicio</Link></li>
-                    <li><Link href="/categorias">Categorías</Link></li>
+                    <li><Link href="/categorias">Productos</Link></li>
                     <li>
                         <Link href="/carrito">
                             <a className="cart-icon"> {/* Usamos <a> tag dentro de Link */}
